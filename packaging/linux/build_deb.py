@@ -61,7 +61,7 @@ def main():
     parser.add_argument("--output-dir", required=True, type=Path)
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    package = args.output_dir.resolve() / f"foldertoiso_{validate_version(args.version)}_amd64.deb"
+    package = args.output_dir.resolve() / f"foldertoiso-{validate_version(args.version)}-amd64.deb"
     with TemporaryDirectory(prefix="foldertoiso-deb-") as temporary:
         stage = Path(temporary) / "package"
         stage_package(args.publish_dir, stage, args.version, args.publisher, args.repository)

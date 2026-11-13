@@ -37,5 +37,16 @@
           Condition="'$(DesktopPlatform)' != 'Windows' and '$(DesktopPlatform)' != 'Linux'">
     <Error Text="DesktopPlatform must be Windows or Linux." />
   </Target>
+  <!-- Unpackaged WinUI builds generate the app PRI but do not publish it automatically. -->
+  <Target Name="PublishApplicationResources" BeforeTargets="ComputeResolvedFilesToPublishList"
+          DependsOnTargets="$(GenerateProjectPriFile)" Condition="'$(DesktopPlatform)' == 'Windows'">
+    <Error Condition="!Exists('$(ProjectPriFullPath)')" Text="The application resource index is missing: $(ProjectPriFullPath)" />
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(ProjectPriFullPath)">
+        <RelativePath>$(ProjectPriFileName)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>
 

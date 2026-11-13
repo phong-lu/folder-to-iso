@@ -1,4 +1,4 @@
-<h1 align="center"><img src="FolderToISO/FolderToISO.png" alt="FolderToISO logo" width="72" align="absmiddle"> FolderToISO</h1>
+<h1 align="center"><img src="foldertoiso/FolderToISO.png" alt="FolderToISO logo" width="72" align="absmiddle"> FolderToISO</h1>
 
 <p align="center">
   <strong>Turn folders into ISO images on Windows, Linux, and macOS.</strong>
@@ -86,15 +86,15 @@ Official GitHub releases include these installers:
 
 | Platform | Installer |
 | --- | --- |
-| Windows x64 | `FolderToISO-<version>-windows-x64-Setup.exe` |
-| Ubuntu 24.04+ / Debian 13+, amd64 | `foldertoiso_<version>_amd64.deb` |
-| Fedora 44, x86_64 | `foldertoiso-<version>-1.x86_64.rpm` |
-| macOS 14+, Apple Silicon (M series) | `FolderToISO-<version>-macos-arm64.pkg` |
+| Windows x64 | `foldertoiso-<version>-windows-x64-setup.exe` |
+| Ubuntu 24.04+ / Debian 13+, amd64 | `foldertoiso-<version>-amd64.deb` |
+| Fedora 44, x86_64 | `foldertoiso-<version>-1-x86-64.rpm` |
+| macOS 14+, Apple Silicon (M series) | `foldertoiso-<version>-macos-arm64.pkg` |
 
 Windows and Linux packages include .NET. The native macOS app has no .NET,
 GTK or Homebrew dependency.
 
-On Windows, run `FolderToISO-<version>-windows-x64-Setup.exe`. The installer
+On Windows, run `foldertoiso-<version>-windows-x64-setup.exe`. The installer
 includes the Windows App SDK and Microsoft Visual C++ runtime, installs a Start
 menu shortcut, and optionally creates a desktop shortcut.
 
@@ -109,7 +109,7 @@ On Ubuntu 24.04+ or Debian 13+, download the `.deb` and install with APT so syst
 dependencies, including GTK 3 and `genisoimage`, are installed automatically:
 
 ```bash
-sudo apt install ./foldertoiso_<version>_amd64.deb
+sudo apt install ./foldertoiso-<version>-amd64.deb
 ```
 
 Then open FolderToISO from the applications menu or run `foldertoiso`.
@@ -118,7 +118,7 @@ A graphical desktop session is required. Release assets include `SHA256SUMS`.
 On Fedora, install with DNF to resolve system dependencies:
 
 ```bash
-sudo dnf install ./foldertoiso-<version>-1.x86_64.rpm
+sudo dnf install ./foldertoiso-<version>-1-x86-64.rpm
 ```
 
 RPM context-menu integration is disabled by default. Enable or disable it with:
@@ -214,7 +214,7 @@ when building from source. On Ubuntu 24.04 / Debian with the .NET SDK installed:
 ```bash
 sudo apt install libgtk-3-0t64 genisoimage
 dotnet build FolderToISO.sln -c Release
-dotnet run --project FolderToISO/FolderToISO.csproj -c Release
+dotnet run --project foldertoiso/FolderToISO.csproj -c Release
 ```
 
 Older Ubuntu/Debian releases use `libgtk-3-0` instead of `libgtk-3-0t64`.
@@ -227,7 +227,7 @@ To publish a self-contained Linux x64 application (the destination machine
 still needs GTK 3 and `genisoimage`, but does not need .NET):
 
 ```bash
-dotnet publish FolderToISO/FolderToISO.csproj -c Release -r linux-x64 --self-contained true -o artifacts/linux-x64
+dotnet publish foldertoiso/FolderToISO.csproj -c Release -r linux-x64 --self-contained true -o artifacts/linux-x64
 ./artifacts/linux-x64/FolderToISO
 ```
 
@@ -253,7 +253,7 @@ SDK and Visual Studio with the WinUI application development workload.
 
 ```powershell
 dotnet build FolderToISO.sln -c Release -p:Platform=x64
-.\FolderToISO\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\FolderToISO.exe
+.\foldertoiso\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\FolderToISO.exe
 ```
 
 Or open `FolderToISO.sln` in Visual Studio, select x64 and launch FolderToISO.
@@ -261,7 +261,7 @@ Windows keeps the native WinUI 3 interface and built-in IMAPI2 UDF 2.01 writer;
 no external ISO utility or optical drive is required.
 
 ```powershell
-dotnet publish FolderToISO/FolderToISO.csproj -c Release -p:Platform=x64 -o artifacts/publish
+dotnet publish foldertoiso/FolderToISO.csproj -c Release -p:Platform=x64 -o artifacts/publish
 ```
 
 Distribute the entire publish folder, not just the executable.
@@ -354,7 +354,7 @@ Installer compilation and installation checks run on their respective platform r
 
 ```text
 folder-to-iso/
-|-- FolderToISO/          # Windows and Linux application, validation, and writers
+|-- foldertoiso/          # Windows and Linux application, validation, and writers
 |-- macos/                # Native SwiftUI application and macOS image writer
 |-- packaging/
 |   |-- windows/          # Windows installer and installation checks

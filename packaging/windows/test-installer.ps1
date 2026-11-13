@@ -17,6 +17,25 @@ for ($index = 0; $index -lt $taskSelections.Count; $index++) {
     $result = Start-Process -FilePath $installerPath -ArgumentList $installerArguments -Wait -PassThru -WindowStyle Hidden
     if ($result.ExitCode -notin 0, 3010) { throw "Installer failed: $($result.ExitCode)" }
     if (!(Test-Path -LiteralPath "$installDir/FolderToISO.exe")) { throw 'Installed executable is missing.' }
+    if (!(Test-Path -LiteralPath "$installDir/FolderToISO.pri")) { throw 'Installed application resource index is missing.' }
+    if ($index -eq 0) {
+        $app = Start-Process -FilePath "$installDir/FolderToISO.exe" -WorkingDirectory $env:TEMP -PassThru -WindowStyle Hidden
+        try {
+            $deadline = [DateTime]::UtcNow.AddSeconds(30)
+            do {
+                Start-Sleep -Milliseconds 250
+                $app.Refresh()
+                if ($app.HasExited) { throw "Installed application exited during startup: $($app.ExitCode)" }
+            } while ($app.MainWindowHandle -eq 0 -and [DateTime]::UtcNow -lt $deadline)
+            if ($app.MainWindowHandle -eq 0) { throw 'Installed application did not open a window within 30 seconds.' }
+            Start-Sleep -Seconds 2
+            $app.Refresh()
+            if ($app.HasExited) { throw "Installed application exited after opening: $($app.ExitCode)" }
+        }
+        finally {
+            if (!$app.HasExited) { Stop-Process -Id $app.Id -Force }
+        }
+    }
     if ($index -in 1, 3) {
         if (!(Test-Path -LiteralPath "$verb/command")) { throw 'Selected context-menu registration is missing.' }
         $command = (Get-Item -LiteralPath "$verb/command").GetValue('')
@@ -28,4 +47,4 @@ for ($index = 0; $index -lt $taskSelections.Count; $index++) {
 $result = Start-Process -FilePath "$installDir/unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru -WindowStyle Hidden
 if ($result.ExitCode -ne 0) { throw "Uninstaller failed: $($result.ExitCode)" }
 if (Test-Path -LiteralPath $verb) { throw 'Uninstall left the context menu registered.' }
-Write-Output 'PASS: Context-menu default, opt-in, upgrade opt-out, command quoting, and uninstall cleanup.'
+Write-Output 'PASS: Installed app opens a window; context-menu default, opt-in, upgrade opt-out, command quoting, and uninstall cleanup.'

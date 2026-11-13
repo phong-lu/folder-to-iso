@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run in the Fedora release-test container as root.
 set -euo pipefail
-dnf install -y artifacts/release/foldertoiso-*.x86_64.rpm xorg-x11-server-Xvfb xdotool
+dnf install -y artifacts/release/foldertoiso-*-x86-64.rpm xorg-x11-server-Xvfb xdotool
 menus=(
   /usr/share/nautilus-python/extensions/foldertoiso.py
   /usr/share/nemo/actions/foldertoiso.nemo_action
@@ -28,7 +28,7 @@ wait "$app" || true
 foldertoiso-context-menu enable
 for entry in "${menus[@]}"; do test -f "$entry"; done
 python3 tests/check_linux_context_menu.py
-rpm -Uvh --replacepkgs artifacts/release/foldertoiso-*.x86_64.rpm
+rpm -Uvh --replacepkgs artifacts/release/foldertoiso-*-x86-64.rpm
 for entry in "${menus[@]}"; do test -f "$entry"; done
 foldertoiso-context-menu disable
 for entry in "${menus[@]}"; do test ! -e "$entry"; done

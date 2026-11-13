@@ -37,7 +37,7 @@ def distribution_xml(version):
     ET.SubElement(outline, "line", {"choice": "app"})
     choice = ET.SubElement(root, "choice", {"id": "app", "title": "FolderToISO", "visible": "false"})
     ET.SubElement(choice, "pkg-ref", {"id": "io.github.foldertoiso.app"})
-    ET.SubElement(root, "pkg-ref", {"id": "io.github.foldertoiso.app", "version": version}).text = "#FolderToISO-component.pkg"
+    ET.SubElement(root, "pkg-ref", {"id": "io.github.foldertoiso.app", "version": version}).text = "#foldertoiso-component.pkg"
     return ET.tostring(root, encoding="unicode")
 
 
@@ -80,14 +80,14 @@ def main():
             component["BundleHasStrictIdentifier"] = True
         with components.open("wb") as stream:
             plistlib.dump(info, stream)
-        component = Path(temporary) / "FolderToISO-component.pkg"
+        component = Path(temporary) / "foldertoiso-component.pkg"
         command = ["pkgbuild", "--root", str(stage), "--component-plist", str(components),
                    "--identifier", "io.github.foldertoiso.app", "--version", version,
                    "--install-location", "/"]
         subprocess.run([*command, str(component)], check=True)
         distribution = Path(temporary) / "Distribution.xml"
         distribution.write_text(distribution_xml(version), encoding="utf-8")
-        package = output / f"FolderToISO-{version}-macos-arm64.pkg"
+        package = output / f"foldertoiso-{version}-macos-arm64.pkg"
         command = ["productbuild", "--distribution", str(distribution), "--package-path", temporary]
         if args.installer_identity:
             command += ["--sign", args.installer_identity]

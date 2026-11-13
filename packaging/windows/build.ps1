@@ -10,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 $publish = (Resolve-Path -LiteralPath $PublishDirectory).Path
 $redist = (Resolve-Path -LiteralPath $RedistPath).Path
 if (!(Test-Path -LiteralPath "$publish/FolderToISO.exe")) { throw 'Publish the Windows application first.' }
+if (!(Test-Path -LiteralPath "$publish/FolderToISO.pri")) { throw 'The published application resource index FolderToISO.pri is missing.' }
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $compiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source

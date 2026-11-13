@@ -46,6 +46,9 @@ def main():
                         "--define", f"payload_dir {payload}", "--define", f"_rpmdir {args.output_dir.resolve()}",
                         "--define", "_rpmfilename %{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm", str(spec_path)], check=True)
     package = args.output_dir / f"foldertoiso-{validate_version(args.version)}-1.x86_64.rpm"
+    renamed = package.with_name(package.name.replace(".x86_64.rpm", "-x86-64.rpm"))
+    package.rename(renamed)
+    package = renamed
     subprocess.run(["rpm", "-qpi", str(package)], check=True)
     print(package)
 
