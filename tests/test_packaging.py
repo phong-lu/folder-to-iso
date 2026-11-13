@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 import plistlib
+from types import ModuleType, SimpleNamespace
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
@@ -202,6 +203,33 @@ class LinuxMenuTests(unittest.TestCase):
 
 
 class AdditionalPlatformTests(unittest.TestCase):
+    def test_nautilus_binding_versions(self):
+        for available in ({"4.1"}, {"4.0"}, {"4.0", "4.1"}, set()):
+            with self.subTest(available=available):
+                gi = ModuleType("gi")
+                selected = []
+
+                def require_version(namespace, version):
+                    self.assertEqual(namespace, "Nautilus")
+                    if version not in available:
+                        raise ValueError("Unavailable version")
+                    selected.append(version)
+
+                gi.require_version = require_version
+                repository = ModuleType("gi.repository")
+                repository.GObject = SimpleNamespace(GObject=type("GObject", (), {}))
+                repository.Nautilus = SimpleNamespace(MenuProvider=type("MenuProvider", (), {}))
+                provider_spec = importlib.util.spec_from_file_location(
+                    "nautilus_provider", ROOT / "packaging/linux/integration/foldertoiso-nautilus.py")
+                provider = importlib.util.module_from_spec(provider_spec)
+                with patch.dict(sys.modules, {"gi": gi, "gi.repository": repository}):
+                    if available:
+                        provider_spec.loader.exec_module(provider)
+                        self.assertEqual(selected, ["4.1" if "4.1" in available else "4.0"])
+                    else:
+                        with self.assertRaises(ValueError):
+                            provider_spec.loader.exec_module(provider)
+
     def test_rpm_metadata_and_uninstall_script(self):
         spec = rpm.render_spec("v1.2.3", "example", "example/FolderToISO")
         self.assertIn("Version: 1.2.3\n", spec)

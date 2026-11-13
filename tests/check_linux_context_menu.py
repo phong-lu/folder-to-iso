@@ -4,13 +4,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import gi
-gi.require_version("Nautilus", "4.0")
-from gi.repository import Gio
-
 spec = importlib.util.spec_from_file_location("foldertoiso_nautilus", "/usr/share/nautilus-python/extensions/foldertoiso.py")
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
+from gi.repository import Gio
+
 provider = module.FolderToISOMenuProvider()
 folder = "/tmp/FolderToISO spaces 'quotes' $(literal) caf\u00e9"
 selected = SimpleNamespace(is_directory=lambda: True, get_location=lambda: Gio.File.new_for_path(folder))

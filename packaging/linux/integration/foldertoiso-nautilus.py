@@ -3,7 +3,11 @@ from pathlib import Path
 import subprocess
 
 import gi
-gi.require_version("Nautilus", "4.0")
+# Newer Nautilus releases ship 4.1; older supported desktops provide 4.0.
+try:
+    gi.require_version("Nautilus", "4.1")
+except ValueError:
+    gi.require_version("Nautilus", "4.0")
 from gi.repository import GObject, Nautilus
 
 
