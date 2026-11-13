@@ -88,7 +88,7 @@ Official GitHub releases include these installers:
 | --- | --- |
 | Windows x64 | `foldertoiso-<version>-windows-x64-setup.exe` |
 | Ubuntu 24.04+ / Debian 13+, amd64 | `foldertoiso-<version>-amd64.deb` |
-| Fedora 44, x86_64 | `foldertoiso-<version>-1-x86-64.rpm` |
+| Fedora 44, x86_64 | `foldertoiso-<version>-x86-64.rpm` |
 | macOS 14+, Apple Silicon (M series) | `foldertoiso-<version>-macos-arm64.pkg` |
 
 Windows and Linux packages include .NET. The native macOS app has no .NET,
@@ -118,7 +118,7 @@ A graphical desktop session is required. Release assets include `SHA256SUMS`.
 On Fedora, install with DNF to resolve system dependencies:
 
 ```bash
-sudo dnf install ./foldertoiso-<version>-1-x86-64.rpm
+sudo dnf install ./foldertoiso-<version>-x86-64.rpm
 ```
 
 RPM context-menu integration is disabled by default. Enable or disable it with:
