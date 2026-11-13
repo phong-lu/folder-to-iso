@@ -404,6 +404,6 @@ Licensed under the [MIT License](LICENSE). Copyright (c) 2026 Phong Lu.
 
 ## Topics
 
-`folder-to-iso`, `iso`, `iso-image`, `udf`, `desktop-app`, `cross-platform`,
-`windows`, `linux`, `macos`, `winui3`, `gtk3`, `swiftui`, `dotnet`, `csharp`,
+`folder-to-iso` `iso` `iso-image` `udf` `desktop-app` `cross-platform`
+`windows` `linux` `macos` `winui3` `gtk3` `swiftui` `dotnet` `csharp`
 `swift`
