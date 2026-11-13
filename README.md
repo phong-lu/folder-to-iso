@@ -1,4 +1,4 @@
-<h1 align="center">&#128191; FolderToISO</h1>
+<h1 align="center"><img src="FolderToISO/FolderToISO.png" alt="FolderToISO logo" width="72" align="absmiddle"> FolderToISO</h1>
 
 <p align="center">
   <strong>Turn folders into ISO images on Windows, Linux, and macOS.</strong>
