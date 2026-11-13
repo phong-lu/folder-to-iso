@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Create ISO with FolderToISO
+Comment=Create an ISO image from this folder
+Icon=foldertoiso
+Exec=/usr/bin/foldertoiso --source %f
+MimeType=inode/directory;
+Terminal=false

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=FolderToISO
+Comment=Create an ISO disc image from a folder
+Exec=foldertoiso
+Icon=foldertoiso
+Terminal=false
+Categories=Utility;Archiving;
+StartupNotify=false

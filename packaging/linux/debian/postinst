@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+. /usr/share/debconf/confmodule
+if [ "$1" = configure ]; then
+    db_get foldertoiso/context-menu
+    if [ "$RET" = true ]; then
+        /usr/bin/python3 /usr/share/foldertoiso/integration/manage.py enable
+    else
+        /usr/bin/python3 /usr/share/foldertoiso/integration/manage.py disable
+    fi
+fi
+db_stop

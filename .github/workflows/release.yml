@@ -1,0 +1,199 @@
+name: Build release installers
+
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-installers-${{ github.event.release.id }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: ${{ !github.event.release.draft && !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publisher: ${{ steps.version.outputs.publisher }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release version
+        id: version
+        run: python3 packaging/release_tools.py metadata
+      - name: Check packaging helpers
+        run: python3 -m unittest discover -s tests -p 'test_packaging.py' -v
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    env:
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+      RELEASE_PUBLISHER: ${{ needs.version.outputs.publisher }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test Windows image creation
+        run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
+      - name: Publish Windows x64 application
+        run: >-
+          dotnet publish FolderToISO/FolderToISO.csproj -c Release -r win-x64
+          -p:Platform=x64 -p:DesktopPlatform=Windows --self-contained true
+          -p:Version=$env:RELEASE_VERSION -o artifacts/publish-windows
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+      - name: Download Microsoft Visual C++ runtime
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://aka.ms/vs/17/release/vc_redist.x64.exe -OutFile artifacts/vc_redist.x64.exe
+          $signature = Get-AuthenticodeSignature artifacts/vc_redist.x64.exe
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+            throw 'The Visual C++ runtime must have a valid Microsoft signature.'
+          }
+      - name: Build Windows installer
+        shell: pwsh
+        run: >-
+          ./packaging/windows/build.ps1 -Version $env:RELEASE_VERSION
+          -Publisher $env:RELEASE_PUBLISHER -PublishDirectory artifacts/publish-windows
+          -RedistPath artifacts/vc_redist.x64.exe -OutputDirectory artifacts/release
+      - name: Verify installer installs and uninstalls
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem artifacts/release/*-windows-x64-Setup.exe)
+          if ($installers.Count -ne 1) { throw 'Expected exactly one Windows installer.' }
+          $installer = $installers[0]
+          ./packaging/windows/test-installer.ps1 -Installer $installer.FullName -InstallDirectory (Join-Path $env:RUNNER_TEMP 'FolderToISO installed')
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-windows-x64
+          path: artifacts/release/*-windows-x64-Setup.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  linux:
+    needs: version
+    runs-on: ubuntu-24.04
+    env:
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+      RELEASE_PUBLISHER: ${{ needs.version.outputs.publisher }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Linux build and test dependencies
+        run: sudo apt-get update && sudo apt-get install -y genisoimage libgtk-3-0t64 xvfb xdotool rpm
+      - name: Test Linux image creation
+        run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
+      - name: Publish Linux x64 application
+        run: >-
+          dotnet publish FolderToISO/FolderToISO.csproj -c Release -r linux-x64
+          -p:DesktopPlatform=Linux --self-contained true -p:Version="$RELEASE_VERSION"
+          -o artifacts/publish-linux
+      - name: Build Debian installer
+        run: >-
+          python3 packaging/linux/build_deb.py --version "$RELEASE_VERSION"
+          --publisher "$RELEASE_PUBLISHER" --publish-dir artifacts/publish-linux
+          --output-dir artifacts/release
+      - name: Verify Debian installation and desktop startup
+        run: |
+          set -euo pipefail
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/release/foldertoiso_*_amd64.deb
+          menu_paths=(
+            /usr/share/nautilus-python/extensions/foldertoiso.py
+            /usr/share/nemo/actions/foldertoiso.nemo_action
+            /usr/share/kio/servicemenus/foldertoiso.desktop
+            /usr/share/Thunar/sendto/foldertoiso.desktop
+          )
+          for entry in "${menu_paths[@]}"; do test ! -e "$entry"; done
+          xvfb-run -a bash -euo pipefail -c '
+            foldertoiso > artifacts/installed-ui.log 2>&1 &
+            app=$!
+            trap "kill $app 2>/dev/null || true" EXIT
+            timeout 15s xdotool search --sync --onlyvisible --name "^FolderToISO$"
+            kill -0 "$app"
+          '
+          printf 'foldertoiso foldertoiso/context-menu boolean true\n' | sudo debconf-set-selections
+          sudo env DEBIAN_FRONTEND=noninteractive dpkg-reconfigure foldertoiso
+          for entry in "${menu_paths[@]}"; do test -f "$entry"; done
+          /usr/bin/python3 tests/check_linux_context_menu.py
+          printf 'foldertoiso foldertoiso/context-menu boolean false\n' | sudo debconf-set-selections
+          sudo env DEBIAN_FRONTEND=noninteractive dpkg-reconfigure foldertoiso
+          for entry in "${menu_paths[@]}"; do test ! -e "$entry"; done
+          printf 'foldertoiso foldertoiso/context-menu boolean true\n' | sudo debconf-set-selections
+          sudo env DEBIAN_FRONTEND=noninteractive dpkg-reconfigure foldertoiso
+          sudo apt-get remove -y foldertoiso
+          for entry in "${menu_paths[@]}"; do test ! -e "$entry"; done
+      - name: Build RPM installer
+        run: >-
+          python3 packaging/linux/build_rpm.py --version "$RELEASE_VERSION"
+          --publisher "$RELEASE_PUBLISHER" --publish-dir artifacts/publish-linux
+          --output-dir artifacts/release
+      - name: Verify RPM installation on Fedora
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace fedora:44 bash tests/check_rpm.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-linux-x64
+          path: |
+            artifacts/release/foldertoiso_*_amd64.deb
+            artifacts/release/foldertoiso-*.x86_64.rpm
+          if-no-files-found: error
+          retention-days: 7
+
+  macos:
+    needs: version
+    runs-on: macos-15
+    env:
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+      - name: Build native ARM64 installer
+        run: python3 packaging/macos/build_pkg.py --version "$RELEASE_VERSION" --output-dir artifacts/release
+      - name: Verify macOS naming and cancellation
+        run: |
+          xcrun swiftc -swift-version 5 -parse-as-library macos/IsoWriter.swift tests/macos_core_tests.swift -o artifacts/macos-core-tests
+          ./artifacts/macos-core-tests
+      - name: Install and verify macOS image creation
+        run: |
+          sudo installer -pkg "artifacts/release/FolderToISO-$RELEASE_VERSION-macos-arm64.pkg" -target /
+          test "$(lipo -archs /Applications/FolderToISO.app/Contents/MacOS/FolderToISO)" = arm64
+          python3 tests/check_macos.py
+      - name: Verify macOS desktop starts
+        run: |
+          /Applications/FolderToISO.app/Contents/MacOS/FolderToISO > artifacts/macos-ui.log 2>&1 &
+          app=$!
+          trap 'kill "$app" 2>/dev/null || true' EXIT
+          sleep 3
+          kill -0 "$app"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-macos-arm64
+          path: artifacts/release/*-macos-arm64.pkg
+          if-no-files-found: error
+          retention-days: 7
+
+  upload:
+    needs: [version, windows, linux, macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          path: artifacts/release
+          merge-multiple: true
+      - name: Attach installers, checksums and installation notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 packaging/release_tools.py publish --assets-dir artifacts/release

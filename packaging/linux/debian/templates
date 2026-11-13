@@ -1,0 +1,10 @@
+Template: foldertoiso/context-menu
+Type: boolean
+Default: false
+Description: Add 'Create ISO with FolderToISO' to folder context menus?
+ Enable folder actions in GNOME Files (Nautilus), Nemo, Dolphin, and Thunar's
+ Send To menu. Actions open FolderToISO with the selected folder and ISO path
+ filled in. You may need to restart your file manager or sign in again.
+ .
+ This is optional and disabled by default. You can change it later by running
+ sudo dpkg-reconfigure foldertoiso.

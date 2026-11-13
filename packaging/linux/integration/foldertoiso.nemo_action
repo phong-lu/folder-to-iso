@@ -1,0 +1,9 @@
+[Nemo Action]
+Name=Create ISO with FolderToISO
+Comment=Create an ISO image from this folder
+Exec=/usr/bin/foldertoiso --source %F
+Icon-Name=foldertoiso
+Selection=s
+Extensions=dir;
+Quote=double
+Dependencies=foldertoiso;
