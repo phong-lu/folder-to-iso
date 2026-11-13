@@ -43,6 +43,9 @@ public sealed partial class MainWindow : Window
                 startupError = "The selected source folder no longer exists. Choose another folder.";
         }
         if (startupError != null) StatusText.Text = startupError;
+        // Revalidate after XAML finishes loading: its initial disabled button state can
+        // overwrite the state calculated while applying an Explorer startup folder.
+        LayoutPanel.Loaded += (_, _) => UpdateDestinationState();
     }
     private void LayoutPanel_Loaded(object sender, RoutedEventArgs e)
     {

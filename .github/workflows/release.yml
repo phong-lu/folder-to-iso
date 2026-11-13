@@ -44,6 +44,8 @@ jobs:
           dotnet publish foldertoiso/FolderToISO.csproj -c Release -r win-x64
           -p:Platform=x64 -p:DesktopPlatform=Windows --self-contained true
           -p:Version=$env:RELEASE_VERSION -o artifacts/publish-windows
+      - name: Verify Windows startup button state
+        run: dotnet run --project tests/FolderToISO.WindowsStartup.csproj -c Release -- artifacts/publish-windows/FolderToISO.exe
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress
       - name: Download Microsoft Visual C++ runtime
