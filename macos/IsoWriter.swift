@@ -127,8 +127,9 @@ enum IsoWriter {
         defer { try? fm.removeItem(at: temporary) }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
+        // makehybrid does not support the -puppetstrings progress option.
         process.arguments = ["makehybrid", "-udf", "-udf-volume-name", label, "-o", temporary.path,
-                             sourceURLResolved.path, "-puppetstrings"]
+                             sourceURLResolved.path]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
