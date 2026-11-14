@@ -9,6 +9,7 @@
 AppId={{CB03843A-EB76-4E71-A66D-4A083E680563}
 AppName=FolderToISO
 AppVersion={#AppVersion}
+AppVerName=FolderToISO {#AppVersion}
 AppPublisher={#Publisher}
 DefaultDirName={autopf}\FolderToISO
 DefaultGroupName=FolderToISO
