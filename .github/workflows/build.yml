@@ -17,7 +17,7 @@ jobs:
       - run: |
           xcrun swiftc -swift-version 5 -parse-as-library macos/IsoWriter.swift tests/macos_core_tests.swift -o artifacts/macos-core-tests
           ./artifacts/macos-core-tests
-          sudo installer -pkg artifacts/release/foldertoiso-0.0.0-macos-arm64.pkg -target /
+          sudo installer -pkg artifacts/release/foldertoiso_0.0.0_arm64.pkg -target /
           python3 tests/check_macos.py
 
   windows:
@@ -31,7 +31,7 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet build FolderToISO.sln -c Release -p:Platform=x64
       - name: Verify Windows startup button state
-        run: dotnet run --project tests/FolderToISO.WindowsStartup.csproj -c Release -- foldertoiso/bin/x64/Release/net10.0-windows10.0.19041.0/win-x64/FolderToISO.exe
+        run: dotnet run --project tests/FolderToISO.WindowsStartup.csproj -c Release -- FolderToISO/bin/x64/Release/net10.0-windows10.0.19041.0/win-x64/FolderToISO.exe
       - run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
 
   linux:
@@ -46,7 +46,7 @@ jobs:
       - name: Verify Linux desktop opens
         run: |
           xvfb-run -a bash -euo pipefail -c '
-            dotnet foldertoiso/bin/x64/Release/net10.0/FolderToISO.dll > artifacts-ui.log 2>&1 &
+            dotnet FolderToISO/bin/x64/Release/net10.0/FolderToISO.dll > artifacts-ui.log 2>&1 &
             app=$!
             trap "kill $app 2>/dev/null || true" EXIT
             timeout 15s xdotool search --sync --onlyvisible --name "^FolderToISO$"

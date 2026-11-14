@@ -35,11 +35,13 @@ def event():
 
 
 class ReleaseTests(unittest.TestCase):
-    def test_installer_filenames_are_lowercase_without_underscores(self):
-        for name in release.installer_names("1.2.3"):
-            with self.subTest(name=name):
-                self.assertEqual(name, name.lower())
-                self.assertNotIn("_", name)
+    def test_installer_filenames_use_underscore_format(self):
+        self.assertEqual(release.installer_names("1.2.3"), [
+            "foldertoiso_1.2.3_x64.exe",
+            "foldertoiso_1.2.3_amd64.deb",
+            "foldertoiso_1.2.3_x86_64.rpm",
+            "foldertoiso_1.2.3_arm64.pkg",
+        ])
 
     def test_official_release_version(self):
         self.assertEqual(release.release_metadata(event()), ("1.2.3", "example"))

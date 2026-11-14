@@ -87,7 +87,7 @@ def main():
         subprocess.run([*command, str(component)], check=True)
         distribution = Path(temporary) / "Distribution.xml"
         distribution.write_text(distribution_xml(version), encoding="utf-8")
-        package = output / f"foldertoiso-{version}-macos-arm64.pkg"
+        package = output / f"foldertoiso_{version}_arm64.pkg"
         command = ["productbuild", "--distribution", str(distribution), "--package-path", temporary]
         if args.installer_identity:
             command += ["--sign", args.installer_identity]

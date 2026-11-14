@@ -41,7 +41,7 @@ jobs:
         run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
       - name: Publish Windows x64 application
         run: >-
-          dotnet publish foldertoiso/FolderToISO.csproj -c Release -r win-x64
+          dotnet publish FolderToISO/FolderToISO.csproj -c Release -r win-x64
           -p:Platform=x64 -p:DesktopPlatform=Windows --self-contained true
           -p:Version=$env:RELEASE_VERSION -o artifacts/publish-windows
       - name: Verify Windows startup button state
@@ -65,14 +65,14 @@ jobs:
       - name: Verify installer installs and uninstalls
         shell: pwsh
         run: |
-          $installers = @(Get-ChildItem artifacts/release/*-windows-x64-setup.exe)
+          $installers = @(Get-ChildItem artifacts/release/foldertoiso_*_x64.exe)
           if ($installers.Count -ne 1) { throw 'Expected exactly one Windows installer.' }
           $installer = $installers[0]
           ./packaging/windows/test-installer.ps1 -Installer $installer.FullName -InstallDirectory (Join-Path $env:RUNNER_TEMP 'FolderToISO installed')
       - uses: actions/upload-artifact@v4
         with:
           name: installer-windows-x64
-          path: artifacts/release/*-windows-x64-setup.exe
+          path: artifacts/release/foldertoiso_*_x64.exe
           if-no-files-found: error
           retention-days: 7
 
@@ -93,7 +93,7 @@ jobs:
         run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
       - name: Publish Linux x64 application
         run: >-
-          dotnet publish foldertoiso/FolderToISO.csproj -c Release -r linux-x64
+          dotnet publish FolderToISO/FolderToISO.csproj -c Release -r linux-x64
           -p:DesktopPlatform=Linux --self-contained true -p:Version="$RELEASE_VERSION"
           -o artifacts/publish-linux
       - name: Build Debian installer
@@ -104,7 +104,7 @@ jobs:
       - name: Verify Debian installation and desktop startup
         run: |
           set -euo pipefail
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/release/foldertoiso-*-amd64.deb
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/release/foldertoiso_*_amd64.deb
           menu_paths=(
             /usr/share/nautilus-python/extensions/foldertoiso.py
             /usr/share/nemo/actions/foldertoiso.nemo_action
@@ -141,8 +141,8 @@ jobs:
         with:
           name: installer-linux-x64
           path: |
-            artifacts/release/foldertoiso-*-amd64.deb
-            artifacts/release/foldertoiso-*-x86-64.rpm
+            artifacts/release/foldertoiso_*_amd64.deb
+            artifacts/release/foldertoiso_*_x86_64.rpm
           if-no-files-found: error
           retention-days: 7
 
@@ -166,7 +166,7 @@ jobs:
           ./artifacts/macos-core-tests
       - name: Install and verify macOS image creation
         run: |
-          sudo installer -pkg "artifacts/release/foldertoiso-$RELEASE_VERSION-macos-arm64.pkg" -target /
+          sudo installer -pkg "artifacts/release/foldertoiso_$RELEASE_VERSION_arm64.pkg" -target /
           test "$(lipo -archs /Applications/FolderToISO.app/Contents/MacOS/FolderToISO)" = arm64
           python3 tests/check_macos.py
       - name: Verify macOS desktop starts
@@ -179,7 +179,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: installer-macos-arm64
-          path: artifacts/release/*-macos-arm64.pkg
+          path: artifacts/release/foldertoiso_*_arm64.pkg
           if-no-files-found: error
           retention-days: 7
 

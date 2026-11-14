@@ -28,8 +28,8 @@ def validate_repository(repository):
 
 def installer_names(version):
     version = validate_version(version)
-    return [f"foldertoiso-{version}-windows-x64-setup.exe", f"foldertoiso-{version}-amd64.deb",
-            f"foldertoiso-{version}-x86-64.rpm", f"foldertoiso-{version}-macos-arm64.pkg"]
+    return [f"foldertoiso_{version}_x64.exe", f"foldertoiso_{version}_amd64.deb",
+            f"foldertoiso_{version}_x86_64.rpm", f"foldertoiso_{version}_arm64.pkg"]
 
 
 def release_metadata(event):
