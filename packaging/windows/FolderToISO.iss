@@ -11,6 +11,7 @@ AppName=FolderToISO
 AppVersion={#AppVersion}
 AppVerName=FolderToISO {#AppVersion}
 AppPublisher={#Publisher}
+SetupIconFile=..\..\FolderToISO\FolderToISO.ico
 DefaultDirName={autopf}\FolderToISO
 DefaultGroupName=FolderToISO
 UninstallDisplayIcon={app}\FolderToISO.exe
@@ -23,9 +24,16 @@ OutputBaseFilename=FolderToISO_{#AppVersion}_x64-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+DisableWelcomePage=no
+WizardImageFile=..\..\FolderToISO\FolderToISO.png
+WizardSmallImageFile=..\..\FolderToISO\FolderToISO.png
 CloseApplications=yes
 RestartApplications=no
 ChangesAssociations=yes
+
+[Messages]
+WelcomeLabel1=Welcome to FolderToISO {#AppVersion}
+WelcomeLabel2=Create mountable ISO images from your folders.%n%nFolderToISO preserves nested directories and empty folders, supports files larger than 4 GiB, and lets you choose an output name and volume label.%n%nSetup will install FolderToISO and its required runtimes. You can also choose a desktop shortcut and File Explorer folder context-menu integration.%n%nClick Next to continue.
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
@@ -51,6 +59,13 @@ Root: HKLM64; Subkey: "Software\Classes\Directory\shell\FolderToISO\command"; Va
 Filename: "{app}\FolderToISO.exe"; Description: "Launch FolderToISO"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [Code]
+procedure InitializeWizard();
+begin
+  // Keep the square logo proportional within the welcome and completion panels.
+  WizardForm.WizardBitmapImage.SetBounds(ScaleX(18), ScaleY(100), ScaleX(128), ScaleY(128));
+  WizardForm.WizardBitmapImage2.SetBounds(ScaleX(18), ScaleY(100), ScaleX(128), ScaleY(128));
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ExitCode: Integer;
