@@ -17,7 +17,7 @@ jobs:
       - run: |
           xcrun swiftc -swift-version 5 -parse-as-library macos/IsoWriter.swift tests/macos_core_tests.swift -o artifacts/macos-core-tests
           ./artifacts/macos-core-tests
-          sudo installer -pkg artifacts/release/foldertoiso_0.0.0_arm64.pkg -target /
+          sudo installer -pkg artifacts/release/FolderToISO_0.0.0_arm64-setup.pkg -target /
           python3 tests/check_macos.py
 
   windows:

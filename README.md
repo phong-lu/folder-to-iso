@@ -86,15 +86,34 @@ Official GitHub releases include these installers:
 
 | Platform | Installer |
 | --- | --- |
-| Windows x64 | `foldertoiso_<version>_x64.exe` |
-| Ubuntu 24.04+ / Debian 13+, amd64 | `foldertoiso_<version>_amd64.deb` |
-| Fedora 44, x86_64 | `foldertoiso_<version>_x86_64.rpm` |
-| macOS 14+, Apple Silicon (M series) | `foldertoiso_<version>_arm64.pkg` |
+| Windows x64 | `FolderToISO_<version>_x64-setup.exe` |
+| Ubuntu 24.04+ / Debian 13+, amd64 | `FolderToISO_<version>_amd64-setup.deb` |
+| Fedora 44, x86_64 | `FolderToISO_<version>_x86_64-setup.rpm` |
+| macOS 14+, Apple Silicon (M series) | `FolderToISO_<version>_arm64-setup.pkg` |
 
 Windows and Linux packages include .NET. The native macOS app has no .NET,
 GTK or Homebrew dependency.
 
-On Windows, run `foldertoiso_<version>_x64.exe`. The installer
+Portable downloads are also available:
+
+| Platform | Archive |
+| --- | --- |
+| Windows x64 | `FolderToISO_<version>_x64-portable.zip` |
+| Linux x64 | `FolderToISO_<version>_x64-portable.tar.xz` |
+| macOS Apple Silicon | `FolderToISO_<version>_arm64-portable.zip` |
+
+Extract the complete archive before running the app. On Windows, run
+`FolderToISO/FolderToISO.exe`; if the Visual C++ runtime is missing, install it
+using the included `vc_redist.x64.exe`. The .NET and Windows App SDK runtimes
+are included. On Linux, extract with `tar -xJf <archive>` and run
+`./FolderToISO/FolderToISO`. The .NET runtime is included, but GTK 3,
+`genisoimage`, and the native system dependencies listed for the Linux packages
+are still required. See `PORTABLE.txt` inside the archive for dependency commands.
+On macOS, unzip and open `FolderToISO.app`; the same signing and notarization
+limitations apply. Portable archives do not register shortcuts or context menus.
+All portable archives are included in `SHA256SUMS`.
+
+On Windows, run `FolderToISO_<version>_x64-setup.exe`. The installer
 includes the Windows App SDK and Microsoft Visual C++ runtime, installs a Start
 menu shortcut, and optionally creates a desktop shortcut.
 
@@ -109,7 +128,7 @@ On Ubuntu 24.04+ or Debian 13+, download the `.deb` and install with APT so syst
 dependencies, including GTK 3 and `genisoimage`, are installed automatically:
 
 ```bash
-sudo apt install ./foldertoiso_<version>_amd64.deb
+sudo apt install ./FolderToISO_<version>_amd64-setup.deb
 ```
 
 Then open FolderToISO from the applications menu or run `foldertoiso`.
@@ -118,7 +137,7 @@ A graphical desktop session is required. Release assets include `SHA256SUMS`.
 On Fedora, install with DNF to resolve system dependencies:
 
 ```bash
-sudo dnf install ./foldertoiso_<version>_x86_64.rpm
+sudo dnf install ./FolderToISO_<version>_x86_64-setup.rpm
 ```
 
 RPM context-menu integration is disabled by default. Enable or disable it with:

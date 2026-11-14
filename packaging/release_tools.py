@@ -28,8 +28,19 @@ def validate_repository(repository):
 
 def installer_names(version):
     version = validate_version(version)
-    return [f"foldertoiso_{version}_x64.exe", f"foldertoiso_{version}_amd64.deb",
-            f"foldertoiso_{version}_x86_64.rpm", f"foldertoiso_{version}_arm64.pkg"]
+    return [f"FolderToISO_{version}_x64-setup.exe", f"FolderToISO_{version}_amd64-setup.deb",
+            f"FolderToISO_{version}_x86_64-setup.rpm", f"FolderToISO_{version}_arm64-setup.pkg"]
+
+
+def portable_names(version):
+    version = validate_version(version)
+    return [f"FolderToISO_{version}_x64-portable.zip",
+            f"FolderToISO_{version}_x64-portable.tar.xz",
+            f"FolderToISO_{version}_arm64-portable.zip"]
+
+
+def asset_names(version):
+    return installer_names(version) + portable_names(version)
 
 
 def release_metadata(event):
@@ -44,10 +55,10 @@ def release_metadata(event):
 def write_checksums(directory, version):
     directory = Path(directory)
     lines = []
-    for filename in installer_names(version):
+    for filename in asset_names(version):
         path = directory / filename
         if not path.is_file() or path.stat().st_size == 0:
-            raise ValueError(f"Missing or empty installer: {filename}")
+            raise ValueError(f"Missing or empty release asset: {filename}")
         with path.open("rb") as stream:
             digest = hashlib.file_digest(stream, "sha256").hexdigest()
         lines.append(f"{digest}  {filename}\n")
@@ -58,6 +69,7 @@ def write_checksums(directory, version):
 
 def installation_notes(version, release_url, tag):
     windows, deb, rpm, macos = installer_names(version)
+    portable_windows, portable_linux, portable_macos = portable_names(version)
     base = f"{release_url.split('/releases/')[0]}/releases/download/{quote(tag, safe='')}"
     return f"""{START}
 ## Install FolderToISO {version}
@@ -68,6 +80,22 @@ def installation_notes(version, release_url, tag):
 | Linux amd64 (Ubuntu 24.04+ / Debian 13+) | [{deb}]({base}/{deb}) |
 | Linux x86_64 (Fedora 44) | [{rpm}]({base}/{rpm}) |
 | macOS 14+ (Apple Silicon / M series) | [{macos}]({base}/{macos}) |
+
+### Portable downloads
+
+| Platform | Archive |
+| --- | --- |
+| Windows x64 | [{portable_windows}]({base}/{portable_windows}) |
+| Linux x64 | [{portable_linux}]({base}/{portable_linux}) |
+| macOS Apple Silicon | [{portable_macos}]({base}/{portable_macos}) |
+
+Extract the complete archive before running the app. Windows: open
+`FolderToISO/FolderToISO.exe`; the included `vc_redist.x64.exe` installs the
+Microsoft Visual C++ runtime if needed. Linux: extract with `tar -xJf {portable_linux}`
+and run `./FolderToISO/FolderToISO`; GTK 3, genisoimage, and .NET native system
+dependencies must already be installed. macOS: unzip and open `FolderToISO.app`.
+Portable packages do not register shortcuts or folder context menus.
+The same OS requirements and macOS signing limitations apply to portable builds.
 
 **Windows:** Run the setup executable. It includes the .NET and Windows App SDK
 runtimes, installs the Microsoft Visual C++ runtime, and adds a Start menu shortcut.
@@ -104,7 +132,7 @@ by default, for Nautilus, Nemo, Dolphin, and Thunar (Send To). Change it later w
 For files larger than 4 GiB in Linux-created images, mount or read the image as
 UDF. Linux filenames are limited to 103 characters per path component.
 
-[SHA-256 checksums]({base}/SHA256SUMS) are included with these installers.
+[SHA-256 checksums]({base}/SHA256SUMS) are included for all installers and portable archives.
 {END}"""
 
 
@@ -143,7 +171,7 @@ def publish(event, assets_dir):
                                   "--input", "-", payload={"tag_name": tag}))
         body = generated.get("body") or ""
     notes = merge_notes(body, installation_notes(version, current["html_url"], tag))
-    assets = [str(Path(assets_dir) / name) for name in installer_names(version)] + [str(sums)]
+    assets = [str(Path(assets_dir) / name) for name in asset_names(version)] + [str(sums)]
     # Upload only after all build jobs succeed. Clobber supports re-running failed jobs.
     gh("release", "upload", tag, *assets, "--repo", repository, "--clobber")
     with TemporaryDirectory() as temporary:
@@ -152,7 +180,7 @@ def publish(event, assets_dir):
         gh("release", "edit", tag, "--repo", repository, "--notes-file", str(notes_file))
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as stream:
-            stream.write(f"Uploaded all four installers and SHA256SUMS to {current['html_url']}\n")
+            stream.write(f"Uploaded all installers, portable archives, and SHA256SUMS to {current['html_url']}\n")
 
 
 def main():

@@ -71,6 +71,9 @@ def main():
             signing += ["--options", "runtime", "--timestamp"]
         subprocess.run([*signing, str(app)], check=True)
         subprocess.run(["codesign", "--verify", "--strict", str(app)], check=True)
+        portable = output / f"FolderToISO_{version}_arm64-portable.zip"
+        subprocess.run(["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(app), str(portable)], check=True)
+        print(portable)
         components = Path(temporary) / "components.plist"
         subprocess.run(["pkgbuild", "--analyze", "--root", str(stage), str(components)], check=True)
         with components.open("rb") as stream:
@@ -87,7 +90,7 @@ def main():
         subprocess.run([*command, str(component)], check=True)
         distribution = Path(temporary) / "Distribution.xml"
         distribution.write_text(distribution_xml(version), encoding="utf-8")
-        package = output / f"foldertoiso_{version}_arm64.pkg"
+        package = output / f"FolderToISO_{version}_arm64-setup.pkg"
         command = ["productbuild", "--distribution", str(distribution), "--package-path", temporary]
         if args.installer_identity:
             command += ["--sign", args.installer_identity]

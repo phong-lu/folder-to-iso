@@ -56,6 +56,16 @@ jobs:
           if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
             throw 'The Visual C++ runtime must have a valid Microsoft signature.'
           }
+      - name: Build Windows portable archive
+        run: >-
+          python packaging/build_portable.py --platform windows --version $env:RELEASE_VERSION
+          --publish-dir artifacts/publish-windows --output-dir artifacts/release
+          --redist artifacts/vc_redist.x64.exe
+      - name: Verify extracted Windows portable app
+        shell: pwsh
+        run: |
+          Expand-Archive "artifacts/release/FolderToISO_${env:RELEASE_VERSION}_x64-portable.zip" artifacts/portable-windows
+          dotnet run --project tests/FolderToISO.WindowsStartup.csproj -c Release -- artifacts/portable-windows/FolderToISO/FolderToISO.exe
       - name: Build Windows installer
         shell: pwsh
         run: >-
@@ -65,14 +75,16 @@ jobs:
       - name: Verify installer installs and uninstalls
         shell: pwsh
         run: |
-          $installers = @(Get-ChildItem artifacts/release/foldertoiso_*_x64.exe)
+          $installers = @(Get-ChildItem artifacts/release/FolderToISO_*_x64-setup.exe)
           if ($installers.Count -ne 1) { throw 'Expected exactly one Windows installer.' }
           $installer = $installers[0]
           ./packaging/windows/test-installer.ps1 -Installer $installer.FullName -InstallDirectory (Join-Path $env:RUNNER_TEMP 'FolderToISO installed')
       - uses: actions/upload-artifact@v4
         with:
           name: installer-windows-x64
-          path: artifacts/release/foldertoiso_*_x64.exe
+          path: |
+            artifacts/release/FolderToISO_*_x64-setup.exe
+            artifacts/release/FolderToISO_*_x64-portable.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -96,6 +108,21 @@ jobs:
           dotnet publish FolderToISO/FolderToISO.csproj -c Release -r linux-x64
           -p:DesktopPlatform=Linux --self-contained true -p:Version="$RELEASE_VERSION"
           -o artifacts/publish-linux
+      - name: Build Linux portable archive
+        run: >-
+          python3 packaging/build_portable.py --platform linux --version "$RELEASE_VERSION"
+          --publish-dir artifacts/publish-linux --output-dir artifacts/release
+      - name: Verify extracted Linux portable app
+        run: |
+          mkdir -p artifacts/portable-linux
+          tar -xJf "artifacts/release/FolderToISO_${RELEASE_VERSION}_x64-portable.tar.xz" -C artifacts/portable-linux
+          xvfb-run -a bash -euo pipefail -c '
+            artifacts/portable-linux/FolderToISO/FolderToISO > artifacts/portable-linux-ui.log 2>&1 &
+            app=$!
+            trap "kill $app 2>/dev/null || true" EXIT
+            timeout 15s xdotool search --sync --onlyvisible --name "^FolderToISO$"
+            kill -0 "$app"
+          '
       - name: Build Debian installer
         run: >-
           python3 packaging/linux/build_deb.py --version "$RELEASE_VERSION"
@@ -104,7 +131,7 @@ jobs:
       - name: Verify Debian installation and desktop startup
         run: |
           set -euo pipefail
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/release/foldertoiso_*_amd64.deb
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifacts/release/FolderToISO_*_amd64-setup.deb
           menu_paths=(
             /usr/share/nautilus-python/extensions/foldertoiso.py
             /usr/share/nemo/actions/foldertoiso.nemo_action
@@ -141,8 +168,9 @@ jobs:
         with:
           name: installer-linux-x64
           path: |
-            artifacts/release/foldertoiso_*_amd64.deb
-            artifacts/release/foldertoiso_*_x86_64.rpm
+            artifacts/release/FolderToISO_*_amd64-setup.deb
+            artifacts/release/FolderToISO_*_x86_64-setup.rpm
+            artifacts/release/FolderToISO_*_x64-portable.tar.xz
           if-no-files-found: error
           retention-days: 7
 
@@ -160,13 +188,22 @@ jobs:
         run: test "$(uname -m)" = arm64
       - name: Build native ARM64 installer
         run: python3 packaging/macos/build_pkg.py --version "$RELEASE_VERSION" --output-dir artifacts/release
+      - name: Verify extracted macOS portable app
+        run: |
+          ditto -x -k "artifacts/release/FolderToISO_${RELEASE_VERSION}_arm64-portable.zip" artifacts/portable-macos
+          codesign --verify --strict artifacts/portable-macos/FolderToISO.app
+          artifacts/portable-macos/FolderToISO.app/Contents/MacOS/FolderToISO > artifacts/portable-macos-ui.log 2>&1 &
+          app=$!
+          trap 'kill "$app" 2>/dev/null || true' EXIT
+          sleep 3
+          kill -0 "$app"
       - name: Verify macOS naming and cancellation
         run: |
           xcrun swiftc -swift-version 5 -parse-as-library macos/IsoWriter.swift tests/macos_core_tests.swift -o artifacts/macos-core-tests
           ./artifacts/macos-core-tests
       - name: Install and verify macOS image creation
         run: |
-          sudo installer -pkg "artifacts/release/foldertoiso_$RELEASE_VERSION_arm64.pkg" -target /
+          sudo installer -pkg "artifacts/release/FolderToISO_${RELEASE_VERSION}_arm64-setup.pkg" -target /
           test "$(lipo -archs /Applications/FolderToISO.app/Contents/MacOS/FolderToISO)" = arm64
           python3 tests/check_macos.py
       - name: Verify macOS desktop starts
@@ -179,7 +216,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: installer-macos-arm64
-          path: artifacts/release/foldertoiso_*_arm64.pkg
+          path: |
+            artifacts/release/FolderToISO_*_arm64-setup.pkg
+            artifacts/release/FolderToISO_*_arm64-portable.zip
           if-no-files-found: error
           retention-days: 7
 

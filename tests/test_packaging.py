@@ -14,6 +14,9 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "packaging"))
 import release_tools as release
+import build_portable as portable
+import tarfile
+import zipfile
 
 spec = importlib.util.spec_from_file_location("build_deb", ROOT / "packaging/linux/build_deb.py")
 deb = importlib.util.module_from_spec(spec)
@@ -37,10 +40,10 @@ def event():
 class ReleaseTests(unittest.TestCase):
     def test_installer_filenames_use_underscore_format(self):
         self.assertEqual(release.installer_names("1.2.3"), [
-            "foldertoiso_1.2.3_x64.exe",
-            "foldertoiso_1.2.3_amd64.deb",
-            "foldertoiso_1.2.3_x86_64.rpm",
-            "foldertoiso_1.2.3_arm64.pkg",
+            "FolderToISO_1.2.3_x64-setup.exe",
+            "FolderToISO_1.2.3_amd64-setup.deb",
+            "FolderToISO_1.2.3_x86_64-setup.rpm",
+            "FolderToISO_1.2.3_arm64-setup.pkg",
         ])
 
     def test_official_release_version(self):
@@ -73,11 +76,11 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 release.merge_notes(body, "replacement")
 
-    def test_checksums_require_all_four_nonempty_installers(self):
+    def test_checksums_require_all_seven_nonempty_assets(self):
         with TemporaryDirectory() as temporary:
             directory = Path(temporary)
-            names = release.installer_names("1.2.3")
-            self.assertEqual(len(names), 4)
+            names = release.asset_names("1.2.3")
+            self.assertEqual(len(names), 7)
             for name in names:
                 (directory / name).write_bytes(name.encode())
             for name in names:
@@ -91,7 +94,7 @@ class ReleaseTests(unittest.TestCase):
     def test_publish_uses_fresh_notes_and_uploads_exact_assets(self):
         with TemporaryDirectory() as temporary:
             directory = Path(temporary)
-            for filename in release.installer_names("1.2.3"):
+            for filename in release.asset_names("1.2.3"):
                 (directory / filename).write_bytes(b"installer")
             calls = []
             saved_notes = []
@@ -116,7 +119,7 @@ class ReleaseTests(unittest.TestCase):
     def test_empty_description_gets_generated_release_notes(self):
         with TemporaryDirectory() as temporary:
             directory = Path(temporary)
-            for filename in release.installer_names("1.2.3"):
+            for filename in release.asset_names("1.2.3"):
                 (directory / filename).write_bytes(b"installer")
             saved_notes = []
 
@@ -141,6 +144,37 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "no longer an official release"):
                 release.publish(event(), Path("unused"))
         self.assertEqual(github.call_count, 1)
+
+
+class PortablePackageTests(unittest.TestCase):
+    def test_archives_preserve_payload_and_linux_executable_mode(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            publish = root / "publish"
+            publish.mkdir()
+            for name in ("FolderToISO", "FolderToISO.exe", "FolderToISO.pri", "coreclr.dll",
+                         "libcoreclr.so", "FolderToISO.dll", "FolderToISO.deps.json",
+                         "FolderToISO.runtimeconfig.json"):
+                (publish / name).write_bytes(b"runtime payload")
+            (publish / "nested").mkdir()
+            (publish / "nested/resource").write_bytes(b"resource")
+            redist = root / "vc_redist.x64.exe"
+            redist.write_bytes(b"runtime installer")
+            windows = portable.build_portable("windows", "1.2.3", publish, root / "out", redist)
+            with zipfile.ZipFile(windows) as archive:
+                self.assertEqual(archive.read("FolderToISO/nested/resource"), b"resource")
+                self.assertEqual(archive.read("FolderToISO/vc_redist.x64.exe"), b"runtime installer")
+                self.assertIn("FolderToISO/FolderToISO.pri", archive.namelist())
+            linux = portable.build_portable("linux", "1.2.3", publish, root / "out")
+            with tarfile.open(linux, "r:xz") as archive:
+                self.assertEqual(archive.extractfile("FolderToISO/nested/resource").read(), b"resource")
+                self.assertEqual(archive.getmember("FolderToISO/FolderToISO").mode & 0o111, 0o111)
+                self.assertIn("FolderToISO/PORTABLE.txt", archive.getnames())
+
+    def test_missing_runtime_rejected_before_creating_archive(self):
+        with TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(ValueError, "Missing self-contained"):
+                portable.build_portable("linux", "1.2.3", Path(temporary), Path(temporary) / "out")
 
 
 class DebianPackageTests(unittest.TestCase):
