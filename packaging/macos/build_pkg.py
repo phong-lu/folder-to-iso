@@ -66,7 +66,8 @@ def main():
                    "-p:EnableCodeSigning=true", "-p:CodesignRequireProvisioningProfile=false",
                    f"-p:CodesignKey={args.app_identity or '-'}",
                    f"-p:Version={version}", f"-p:ApplicationDisplayVersion={version}",
-                   f"-p:BaseOutputPath={build}{os.sep}"]
+                   f"-p:BaseOutputPath={build}{os.sep}",
+                   f"-flp:logfile={output / 'macos-build.log'};verbosity=diagnostic"]
         if args.app_identity:
             command.append("-p:UseHardenedRuntime=true")
         subprocess.run(command, check=True)
