@@ -291,8 +291,8 @@ class AdditionalPlatformTests(unittest.TestCase):
                 if command[:2] == ["dotnet", "publish"]:
                     self.assertNotIn("-o", command)
                     self.assertFalse(any(arg.startswith("-p:AppBundleDir=") for arg in command))
-                    output_arg = next(arg for arg in command if arg.startswith("-p:BaseOutputPath="))
-                    app = Path(output_arg.split("=", 1)[1]) / "Release/net10.0-maccatalyst/maccatalyst-arm64/FolderToISO.app"
+                    self.assertFalse(any(arg.startswith("-p:BaseOutputPath=") for arg in command))
+                    app = Path(temporary) / "FolderToISO/bin/Release/net10.0-maccatalyst/maccatalyst-arm64/FolderToISO.app"
                     (app / "Contents/MacOS").mkdir(parents=True)
                     (app / "Contents/MacOS/FolderToISO").write_bytes(b"executable")
                     (app / "Contents/Info.plist").write_bytes(plistlib.dumps({
@@ -307,7 +307,7 @@ class AdditionalPlatformTests(unittest.TestCase):
                     Path(command[-1]).write_bytes(plistlib.dumps([]))
 
             with patch.object(sys, "argv", ["build_pkg.py", "--version", "1.2.3",
-                                            "--output-dir", temporary]), patch.object(mac.subprocess, "run", side_effect=run):
+                                            "--output-dir", temporary]), patch.object(mac, "ROOT", Path(temporary)), patch.object(mac.subprocess, "run", side_effect=run):
                 mac.main()
             self.assertEqual(len(packaged), 1)
 

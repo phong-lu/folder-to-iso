@@ -58,7 +58,7 @@ def main():
     with TemporaryDirectory(prefix="foldertoiso-macos-") as temporary:
         stage = Path(temporary) / "root"
         app = stage / "Applications/FolderToISO.app"
-        build = Path(temporary) / "build"
+        build = ROOT / "FolderToISO/bin"
         built_app = build / "Release/net10.0-maccatalyst/maccatalyst-arm64/FolderToISO.app"
         command = ["dotnet", "publish", str(ROOT / "FolderToISO/FolderToISO.csproj"),
                    "-c", "Release", "-p:DesktopPlatform=MacCatalyst", "-r", "maccatalyst-arm64",
@@ -66,12 +66,12 @@ def main():
                    "-p:EnableCodeSigning=true", "-p:CodesignRequireProvisioningProfile=false",
                    f"-p:CodesignKey={args.app_identity or '-'}",
                    f"-p:Version={version}", f"-p:ApplicationDisplayVersion={version}",
-                   f"-p:BaseOutputPath={build}{os.sep}",
                    f"-flp:logfile={output / 'macos-build.log'};verbosity=diagnostic"]
         if args.app_identity:
             command.append("-p:UseHardenedRuntime=true")
         subprocess.run(command, check=True)
-        # Keep the SDK's bundle and publish paths aligned under an isolated build root.
+        # Use the SDK's default relative output paths: absolute output overrides
+        # can make its publish-copy paths point outside the actual app bundle.
         validate_bundle(built_app, version)
         app.parent.mkdir(parents=True)
         # Preserve framework symlinks and the SDK's signatures on nested native code.
