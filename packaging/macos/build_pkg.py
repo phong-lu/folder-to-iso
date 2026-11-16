@@ -25,7 +25,8 @@ def validate_bundle(app, version):
         raise ValueError("Application and installer versions differ.")
     executable = app / "Contents/MacOS" / info.get("CFBundleExecutable", "")
     if not executable.is_file():
-        raise ValueError("Missing published MAUI executable.")
+        raise ValueError(f"Missing published MAUI executable: {executable}. "
+                         f"Bundle files: {sorted(str(path.relative_to(app)) for path in app.rglob('*'))}")
     return info
 
 
@@ -57,20 +58,19 @@ def main():
     with TemporaryDirectory(prefix="foldertoiso-macos-") as temporary:
         stage = Path(temporary) / "root"
         app = stage / "Applications/FolderToISO.app"
-        publish = Path(temporary) / "publish"
-        built_app = Path(temporary) / "bundle/FolderToISO.app"
+        build = Path(temporary) / "build"
+        built_app = build / "Release/net10.0-maccatalyst/maccatalyst-arm64/FolderToISO.app"
         command = ["dotnet", "publish", str(ROOT / "FolderToISO/FolderToISO.csproj"),
                    "-c", "Release", "-p:DesktopPlatform=MacCatalyst", "-r", "maccatalyst-arm64",
                    "--self-contained", "true", "-p:CreatePackage=false",
                    "-p:EnableCodeSigning=true", "-p:CodesignRequireProvisioningProfile=false",
                    f"-p:CodesignKey={args.app_identity or '-'}",
                    f"-p:Version={version}", f"-p:ApplicationDisplayVersion={version}",
-                   f"-p:AppBundleDir={built_app}",
-                   "-o", str(publish)]
+                   f"-p:BaseOutputPath={build}{os.sep}"]
         if args.app_identity:
             command.append("-p:UseHardenedRuntime=true")
         subprocess.run(command, check=True)
-        # Mac Catalyst builds the .app separately from PublishDir.
+        # Keep the SDK's bundle and publish paths aligned under an isolated build root.
         validate_bundle(built_app, version)
         app.parent.mkdir(parents=True)
         # Preserve framework symlinks and the SDK's signatures on nested native code.

@@ -283,16 +283,16 @@ class AdditionalPlatformTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             rpm.render_spec("1.2.3", "bad\nInjected: field")
 
-    def test_mac_packaging_uses_explicit_build_bundle_location(self):
+    def test_mac_packaging_preserves_sdk_output_layout(self):
         with TemporaryDirectory() as temporary:
             packaged = []
 
             def run(command, check):
                 if command[:2] == ["dotnet", "publish"]:
-                    bundle_arg = next(arg for arg in command if arg.startswith("-p:AppBundleDir="))
-                    app = Path(bundle_arg.split("=", 1)[1])
-                    publish = Path(command[command.index("-o") + 1])
-                    self.assertNotEqual(app.parent, publish)
+                    self.assertNotIn("-o", command)
+                    self.assertFalse(any(arg.startswith("-p:AppBundleDir=") for arg in command))
+                    output_arg = next(arg for arg in command if arg.startswith("-p:BaseOutputPath="))
+                    app = Path(output_arg.split("=", 1)[1]) / "Release/net10.0-maccatalyst/maccatalyst-arm64/FolderToISO.app"
                     (app / "Contents/MacOS").mkdir(parents=True)
                     (app / "Contents/MacOS/FolderToISO").write_bytes(b"executable")
                     (app / "Contents/Info.plist").write_bytes(plistlib.dumps({
