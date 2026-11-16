@@ -189,8 +189,16 @@ jobs:
         run: test "$(uname -m)" = arm64
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
-      - run: dotnet workload install maui-maccatalyst
+          dotnet-version: '10.0.100'
+      # Workload set 10.0.100 targets Xcode 26.0; keep these versions aligned.
+      - name: Select Xcode 26.0.1
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_26.0.1.app/Contents/Developer
+          xcodebuild -version
+      - name: Install pinned Mac Catalyst workload
+        run: |
+          dotnet new globaljson --sdk-version 10.0.100 --roll-forward disable
+          dotnet workload install maui-maccatalyst --version 10.0.100
       - name: Verify C# macOS writer and cancellation
         run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
       - name: Build MAUI Mac Catalyst ARM64 installer
