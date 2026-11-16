@@ -16,16 +16,16 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Windows-WinUI_3-0078D4?style=flat-square" alt="Windows with WinUI 3">
+  <img src="https://img.shields.io/badge/Windows-MAUI_(WinUI_3)-0078D4?style=flat-square" alt="Windows with MAUI and WinUI 3">
   <img src="https://img.shields.io/badge/Linux-GTK_3-E95420?style=flat-square&amp;logo=linux&amp;logoColor=white" alt="Linux with GTK 3">
-  <img src="https://img.shields.io/badge/macOS-SwiftUI-F05138?style=flat-square&amp;logo=swift&amp;logoColor=white" alt="macOS with SwiftUI">
+  <img src="https://img.shields.io/badge/macOS-MAUI_(Mac_Catalyst)-F05138?style=flat-square&amp;logo=dotnet&amp;logoColor=white" alt="macOS with MAUI and Mac Catalyst">
   <img src="https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&amp;logo=dotnet&amp;logoColor=white" alt=".NET 10">
   <img src="https://img.shields.io/badge/Image_format-UDF-555555?style=flat-square" alt="UDF image format">
 </p>
 
 FolderToISO packages a directory's contents into a mountable `.iso` file using
-an interface built for each platform: WinUI 3 on Windows, GTK 3 on Linux, and
-SwiftUI on macOS. Use it to distribute a collection of files, organize an offline
+a shared .NET MAUI interface on Windows (WinUI 3) and macOS (Mac Catalyst),
+plus a GTK 3 interface on Linux. Use it to distribute a collection of files, organize an offline
 archive, or prepare a data image without an optical drive.
 
 It preserves nested and empty folders, supports individual files larger than
@@ -51,7 +51,7 @@ and confirmation before replacing an existing image.
 
 | Feature | Details |
 | --- | --- |
-| Native desktop interfaces | WinUI 3, GTK 3, and SwiftUI interfaces with folder and output pickers. |
+| Native desktop interfaces | MAUI (Windows/macOS) and GTK 3 (Linux) interfaces with folder and output pickers. |
 | UDF image creation | Supports files larger than 4 GiB; Linux images also include ISO9660, Rock Ridge, and Joliet views. |
 | Folder structure | Includes nested directories and empty folders, with source contents at the image root. |
 | Automatic naming | Selecting a folder suggests an adjacent `<folder path>.iso` output. |
@@ -71,9 +71,9 @@ Each platform uses its own image-writing backend:
 
 | Platform | Interface | Image writer | Image format |
 | --- | --- | --- | --- |
-| Windows x64 | WinUI 3 / .NET 10 | Built-in Windows IMAPI2 | UDF 2.01 |
+| Windows x64 | MAUI / WinUI 3 / .NET 10 | Built-in Windows IMAPI2 | UDF 2.01 |
 | Linux x64 | GTK 3 / .NET 10 | System `genisoimage` | Hybrid UDF, ISO9660, Rock Ridge, and Joliet |
-| macOS ARM64 | SwiftUI / Swift | Built-in `hdiutil makehybrid` | UDF |
+| macOS ARM64 | MAUI / Mac Catalyst / .NET 10 | Built-in `hdiutil makehybrid` | UDF |
 
 The app validates the request, checks source entries, writes a temporary image
 beside the destination, and moves the completed image into place. Ordinary
@@ -91,8 +91,7 @@ Official GitHub releases include these installers:
 | Fedora 44, x86_64 | `FolderToISO_<version>_x86_64-setup.rpm` |
 | macOS 14+, Apple Silicon (M series) | `FolderToISO_<version>_arm64-setup.pkg` |
 
-Windows and Linux packages include .NET. The native macOS app has no .NET,
-GTK or Homebrew dependency.
+Windows and Linux packages include .NET. The macOS package includes its .NET runtime and has no GTK or Homebrew dependency.
 
 Portable downloads are also available:
 
@@ -150,7 +149,7 @@ sudo foldertoiso-context-menu disable
 The setting survives RPM upgrades, and uninstalling removes the menu entries.
 
 On Apple Silicon Macs, open the `.pkg` to install `/Applications/FolderToISO.app`.
-The app uses SwiftUI and the built-in `hdiutil` UDF writer, with automatic output
+The app uses .NET MAUI with Mac Catalyst and the built-in `hdiutil` UDF writer, with automatic output
 naming, file/folder pickers, replacement confirmation, progress and cancellation.
 Only ARM64 builds for M-series Macs are provided; Intel Macs are not targeted.
 Current macOS builds use an ad-hoc signature and are not notarized. Downloaded
@@ -208,14 +207,19 @@ cd folder-to-iso
 
 ### macOS
 
-Build on an Apple Silicon Mac with macOS 14+ and Xcode command-line tools:
+Build on an Apple Silicon Mac with macOS 14+, the .NET 10 SDK, and the full Xcode
+version required by the installed MAUI workload:
 
 ```bash
+dotnet workload install maui-maccatalyst
 python3 packaging/macos/build_pkg.py --version 1.2.3 --output-dir artifacts/release
 ```
 
-The macOS implementation is in `macos/` and builds separately from the .NET
-solution. The package restricts installation to ARM64 and macOS 14 or later.
+Windows and macOS share `FolderToISO/MainPage.xaml` and its C# UI logic.
+The builder publishes the MAUI project for `net10.0-maccatalyst` / `maccatalyst-arm64`,
+then packages the complete .NET app bundle. The package restricts installation
+to ARM64 and macOS 14 or later. On macOS, **Choose folder…** selects the output
+directory; edit the filename in the ISO file field.
 The builder accepts `--app-identity` and `--installer-identity` for Developer ID
 certificates already installed in the build machine's keychain. CI currently
 uses ad-hoc app signing; no private signing certificates or notarization
@@ -232,7 +236,7 @@ when building from source. On Ubuntu 24.04 / Debian with the .NET SDK installed:
 
 ```bash
 sudo apt install libgtk-3-0t64 genisoimage
-dotnet build FolderToISO.sln -c Release
+dotnet build FolderToISO.slnx -c Release
 dotnet run --project FolderToISO/FolderToISO.csproj -c Release
 ```
 
@@ -268,15 +272,16 @@ for backend options and limitations.
 ### Windows
 
 Requires Windows 10 (2004+) or Windows 11, x64. Building requires the .NET 10
-SDK and Visual Studio with the WinUI application development workload.
+SDK and the MAUI Windows workload (or Visual Studio with .NET MAUI development).
 
 ```powershell
-dotnet build FolderToISO.sln -c Release -p:Platform=x64
+dotnet workload install maui-windows
+dotnet build FolderToISO.slnx -c Release -p:Platform=x64
 .\FolderToISO\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\FolderToISO.exe
 ```
 
-Or open `FolderToISO.sln` in Visual Studio, select x64 and launch FolderToISO.
-Windows keeps the native WinUI 3 interface and built-in IMAPI2 UDF 2.01 writer;
+Or open `FolderToISO.slnx` in Visual Studio, select x64 and launch FolderToISO.
+Windows uses MAUI controls backed by WinUI 3 and the built-in IMAPI2 UDF 2.01 writer;
 no external ISO utility or optical drive is required.
 
 ```powershell
@@ -285,8 +290,8 @@ dotnet publish FolderToISO/FolderToISO.csproj -c Release -p:Platform=x64 -o arti
 
 Distribute the entire publish folder, not just the executable.
 
-The project chooses its UI from the build host: Windows uses WinUI and Linux
-uses GTK. `-p:DesktopPlatform=Linux` explicitly selects the Linux UI for a
+The project chooses its UI from the build host: Windows and macOS use MAUI;
+Linux uses GTK. `-p:DesktopPlatform=MacCatalyst` explicitly selects macOS. `-p:DesktopPlatform=Linux` explicitly selects the Linux UI for a
 compile check on another host. Running that build still requires Linux.
 
 ## Checks
@@ -309,15 +314,13 @@ Artifacts remain under `artifacts/`; the latest image path is recorded in
 The [build workflow](.github/workflows/build.yml) builds and checks Windows,
 Linux, and macOS. Linux checks open the GTK window under Xvfb, create small and
 large images, mount them as UDF, and compare the directory tree and file hashes
-with the source. macOS checks compile the native app, test cancellation, install
+with the source. macOS checks build the MAUI app, test cancellation, install
 the package, and verify mounted image contents, including files over 4 GiB.
 
-To run the native macOS core checks on a Mac:
+To run the shared C# macOS writer checks (including running-process cancellation):
 
 ```bash
-mkdir -p artifacts
-xcrun swiftc -swift-version 5 -parse-as-library macos/IsoWriter.swift tests/macos_core_tests.swift -o artifacts/macos-core-tests
-./artifacts/macos-core-tests
+dotnet run --project tests/FolderToISO.Integration.csproj -c Release
 ```
 
 After installing the macOS package, run the installed-app integration check:
@@ -373,8 +376,7 @@ Installer compilation and installation checks run on their respective platform r
 
 ```text
 folder-to-iso/
-|-- FolderToISO/          # Windows and Linux application, validation, and writers
-|-- macos/                # Native SwiftUI application and macOS image writer
+|-- FolderToISO/          # Shared MAUI UI, Linux GTK UI, validation, and writers
 |-- packaging/
 |   |-- windows/          # Windows installer and installation checks
 |   |-- linux/            # DEB/RPM builders and file-manager integration
@@ -382,7 +384,7 @@ folder-to-iso/
 |   `-- release_tools.py  # Release metadata, checksums, and asset publishing
 |-- tests/                # Image, cancellation, packaging, and installation checks
 |-- .github/workflows/    # Build verification and release automation
-|-- FolderToISO.sln       # Windows/Linux .NET solution
+|-- FolderToISO.slnx      # Windows/macOS MAUI and Linux GTK solution
 `-- LICENSE              # MIT license
 ```
 
@@ -424,5 +426,4 @@ Licensed under the [MIT License](LICENSE). Copyright (c) 2026 Phong Lu.
 ## Topics
 
 `folder-to-iso` `iso` `iso-image` `udf` `desktop-app` `cross-platform`
-`windows` `linux` `macos` `winui3` `gtk3` `swiftui` `dotnet` `csharp`
-`swift`
+`windows` `linux` `macos` `winui3` `gtk3` `maui` `maccatalyst` `dotnet` `csharp`

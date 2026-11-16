@@ -8,10 +8,10 @@ public static class IsoBuilder
         ? string.Empty : Path.TrimEndingDirectorySeparator(source.Trim()) + ".iso";
 
     public static async Task CreateAsync(string source, string destination, string label,
-        IProgress<IsoProgress>? progress = null, CancellationToken cancellationToken = default)
+        IProgress<IsoProgress>? progress = null, CancellationToken cancellationToken = default, bool overwrite = true)
     {
-        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())
-            throw new PlatformNotSupportedException("FolderToISO supports Windows and Linux.");
+        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS() && !OperatingSystem.IsMacCatalyst())
+            throw new PlatformNotSupportedException("FolderToISO supports Windows, Linux and macOS.");
         if (string.IsNullOrWhiteSpace(source) || !Directory.Exists(source))
             throw new ArgumentException("Select an existing source folder.");
         if (string.IsNullOrWhiteSpace(destination) || !Path.IsPathFullyQualified(destination))
@@ -20,6 +20,15 @@ public static class IsoBuilder
         destination = Path.GetFullPath(destination);
         if (!string.Equals(Path.GetExtension(destination), ".iso", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("The output file must have an .iso extension.");
+        // Default macOS volumes ignore case. Conservatively reject case aliases even
+        // on case-sensitive volumes, so an output alias cannot enter the source tree.
+        var mac = OperatingSystem.IsMacOS() || OperatingSystem.IsMacCatalyst();
+        var comparison = mac ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var sourcePrefix = Path.EndsInDirectorySeparator(source) ? source : source + Path.DirectorySeparatorChar;
+        if (mac && (destination.Equals(source, comparison) || destination.StartsWith(sourcePrefix, comparison)))
+            throw new ArgumentException("Save the ISO outside the source folder.");
+        if (File.Exists(destination) && !overwrite)
+            throw new IOException("The ISO already exists. Choose another path or confirm replacement.");
         var relative = Path.GetRelativePath(source, destination);
         if (!Path.IsPathFullyQualified(relative) && relative != ".." &&
             !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
@@ -46,15 +55,17 @@ public static class IsoBuilder
                 throw new IOException("The output drive does not have enough free space.");
         }, cancellationToken).ConfigureAwait(false);
 
-        var temporary = Path.Combine(outputDirectory, $".foldertoiso-{Guid.NewGuid():N}.partial");
+        var temporary = Path.Combine(outputDirectory, $".foldertoiso-{Guid.NewGuid():N}.partial.iso");
         try
         {
             if (OperatingSystem.IsWindows())
                 await WindowsIsoWriter.CreateAsync(source, temporary, label, progress, cancellationToken).ConfigureAwait(false);
+            else if (mac)
+                await MacIsoWriter.CreateAsync(source, temporary, label, progress, cancellationToken).ConfigureAwait(false);
             else
                 await LinuxIsoWriter.CreateAsync(source, temporary, label, progress, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            File.Move(temporary, destination, true);
+            File.Move(temporary, destination, overwrite);
         }
         finally
         {

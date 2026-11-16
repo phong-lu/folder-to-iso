@@ -284,9 +284,19 @@ class AdditionalPlatformTests(unittest.TestCase):
             rpm.render_spec("1.2.3", "bad\nInjected: field")
 
     def test_mac_bundle_and_installer_target_apple_silicon(self):
-        info = plistlib.loads(plistlib.dumps(mac.app_info("v1.2.3")))
-        self.assertEqual(info["CFBundleShortVersionString"], "1.2.3")
-        self.assertEqual(info["LSMinimumSystemVersion"], "14.0")
+        with TemporaryDirectory() as temporary:
+            app = Path(temporary) / "FolderToISO.app"
+            (app / "Contents/MacOS").mkdir(parents=True)
+            (app / "Contents/MacOS/FolderToISO").write_bytes(b"published executable")
+            info = {"CFBundleIdentifier": "io.github.foldertoiso.app",
+                    "CFBundleShortVersionString": "1.2.3", "CFBundleExecutable": "FolderToISO"}
+            (app / "Contents/Info.plist").write_bytes(plistlib.dumps(info))
+            self.assertEqual(mac.validate_bundle(app, "v1.2.3"), info)
+            with self.assertRaises(ValueError):
+                mac.validate_bundle(app, "1.2.4")
+            (app / "Contents/MacOS/FolderToISO").unlink()
+            with self.assertRaises(ValueError):
+                mac.validate_bundle(app, "1.2.3")
         distribution = ET.fromstring(mac.distribution_xml("1.2.3"))
         self.assertEqual(distribution.find("options").get("hostArchitectures"), "arm64")
         self.assertEqual(distribution.find("volume-check/allowed-os-versions/os-version").get("min"), "14.0")
