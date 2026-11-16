@@ -283,6 +283,34 @@ class AdditionalPlatformTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             rpm.render_spec("1.2.3", "bad\nInjected: field")
 
+    def test_mac_packaging_uses_explicit_build_bundle_location(self):
+        with TemporaryDirectory() as temporary:
+            packaged = []
+
+            def run(command, check):
+                if command[:2] == ["dotnet", "publish"]:
+                    bundle_arg = next(arg for arg in command if arg.startswith("-p:AppBundleDir="))
+                    app = Path(bundle_arg.split("=", 1)[1])
+                    publish = Path(command[command.index("-o") + 1])
+                    self.assertNotEqual(app.parent, publish)
+                    (app / "Contents/MacOS").mkdir(parents=True)
+                    (app / "Contents/MacOS/FolderToISO").write_bytes(b"executable")
+                    (app / "Contents/Info.plist").write_bytes(plistlib.dumps({
+                        "CFBundleIdentifier": "io.github.foldertoiso.app",
+                        "CFBundleShortVersionString": "1.2.3",
+                        "CFBundleExecutable": "FolderToISO",
+                    }))
+                elif command[:2] == ["codesign", "--verify"]:
+                    mac.validate_bundle(Path(command[-1]), "1.2.3")
+                    packaged.append(command[-1])
+                elif command[:2] == ["pkgbuild", "--analyze"]:
+                    Path(command[-1]).write_bytes(plistlib.dumps([]))
+
+            with patch.object(sys, "argv", ["build_pkg.py", "--version", "1.2.3",
+                                            "--output-dir", temporary]), patch.object(mac.subprocess, "run", side_effect=run):
+                mac.main()
+            self.assertEqual(len(packaged), 1)
+
     def test_mac_bundle_and_installer_target_apple_silicon(self):
         with TemporaryDirectory() as temporary:
             app = Path(temporary) / "FolderToISO.app"

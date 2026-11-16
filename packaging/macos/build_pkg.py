@@ -58,21 +58,23 @@ def main():
         stage = Path(temporary) / "root"
         app = stage / "Applications/FolderToISO.app"
         publish = Path(temporary) / "publish"
+        built_app = Path(temporary) / "bundle/FolderToISO.app"
         command = ["dotnet", "publish", str(ROOT / "FolderToISO/FolderToISO.csproj"),
                    "-c", "Release", "-p:DesktopPlatform=MacCatalyst", "-r", "maccatalyst-arm64",
                    "--self-contained", "true", "-p:CreatePackage=false",
                    "-p:EnableCodeSigning=true", "-p:CodesignRequireProvisioningProfile=false",
                    f"-p:CodesignKey={args.app_identity or '-'}",
                    f"-p:Version={version}", f"-p:ApplicationDisplayVersion={version}",
+                   f"-p:AppBundleDir={built_app}",
                    "-o", str(publish)]
         if args.app_identity:
             command.append("-p:UseHardenedRuntime=true")
         subprocess.run(command, check=True)
-        published_app = publish / "FolderToISO.app"
-        validate_bundle(published_app, version)
+        # Mac Catalyst builds the .app separately from PublishDir.
+        validate_bundle(built_app, version)
         app.parent.mkdir(parents=True)
         # Preserve framework symlinks and the SDK's signatures on nested native code.
-        shutil.copytree(published_app, app, symlinks=True)
+        shutil.copytree(built_app, app, symlinks=True)
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
         portable = output / f"FolderToISO_{version}_arm64-portable.zip"
         subprocess.run(["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(app), str(portable)], check=True)
