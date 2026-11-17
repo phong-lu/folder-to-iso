@@ -232,7 +232,7 @@ when building from source. On Ubuntu 24.04 / Debian with the .NET SDK installed:
 
 ```bash
 sudo apt install libgtk-3-0t64 genisoimage
-dotnet build FolderToISO.sln -c Release
+dotnet build FolderToISO.slnx -c Release
 dotnet run --project FolderToISO/FolderToISO.csproj -c Release
 ```
 
@@ -271,11 +271,11 @@ Requires Windows 10 (2004+) or Windows 11, x64. Building requires the .NET 10
 SDK and Visual Studio with the WinUI application development workload.
 
 ```powershell
-dotnet build FolderToISO.sln -c Release -p:Platform=x64
+dotnet build FolderToISO.slnx -c Release -p:Platform=x64
 .\FolderToISO\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\FolderToISO.exe
 ```
 
-Or open `FolderToISO.sln` in Visual Studio, select x64 and launch FolderToISO.
+Or open `FolderToISO.slnx` in Visual Studio, select x64 and launch FolderToISO.
 Windows keeps the native WinUI 3 interface and built-in IMAPI2 UDF 2.01 writer;
 no external ISO utility or optical drive is required.
 
@@ -382,7 +382,7 @@ folder-to-iso/
 |   `-- release_tools.py  # Release metadata, checksums, and asset publishing
 |-- tests/                # Image, cancellation, packaging, and installation checks
 |-- .github/workflows/    # Build verification and release automation
-|-- FolderToISO.sln       # Windows/Linux .NET solution
+|-- FolderToISO.slnx       # Windows/Linux .NET solution
 `-- LICENSE              # MIT license
 ```
 
