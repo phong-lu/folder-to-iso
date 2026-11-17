@@ -24,7 +24,7 @@ def stage_payload(publish_dir, stage):
     shutil.copyfile(ASSETS / "foldertoiso.svg", icon)
     documentation = stage / "usr/share/doc/foldertoiso"
     documentation.mkdir(parents=True)
-    shutil.copyfile(ROOT / "README.md", documentation / "README.md")
+    shutil.copyfile(ROOT.parent / "README.md", documentation / "README.md")
     integration = stage / "usr/share/foldertoiso/integration"
     shutil.copytree(ASSETS / "integration", integration, ignore=shutil.ignore_patterns("__pycache__"))
     helper = stage / "usr/bin/foldertoiso-context-menu"

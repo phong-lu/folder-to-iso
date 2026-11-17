@@ -39,7 +39,7 @@ def build_portable(platform, version, publish_dir, output_dir, redist=None):
                             "Ubuntu 24.04+/Debian 13+: sudo apt install libgtk-3-0 genisoimage libicu-dev libssl-dev libgssapi-krb5-2\n"
                             "Fedora 44: sudo dnf install gtk3 genisoimage libicu openssl-libs krb5-libs\n")
         (app / "PORTABLE.txt").write_text(instructions + "No shortcuts or context menus are registered.\n", encoding="utf-8")
-        shutil.copyfile(Path(__file__).resolve().parents[1] / "LICENSE", app / "LICENSE")
+        shutil.copyfile(Path(__file__).resolve().parents[2] / "LICENSE", app / "LICENSE")
         if platform == "windows":
             with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as stream:
                 for path in sorted(app.rglob("*")):

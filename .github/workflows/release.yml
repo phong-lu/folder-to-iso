@@ -11,6 +11,10 @@ concurrency:
   group: release-installers-${{ github.event.release.id }}
   cancel-in-progress: false
 
+defaults:
+  run:
+    working-directory: src
+
 jobs:
   version:
     if: ${{ !github.event.release.draft && !github.event.release.prerelease }}
@@ -83,8 +87,8 @@ jobs:
         with:
           name: installer-windows-x64
           path: |
-            artifacts/release/FolderToISO_*_x64-setup.exe
-            artifacts/release/FolderToISO_*_x64-portable.zip
+            src/artifacts/release/FolderToISO_*_x64-setup.exe
+            src/artifacts/release/FolderToISO_*_x64-portable.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -163,14 +167,14 @@ jobs:
           --publisher "$RELEASE_PUBLISHER" --publish-dir artifacts/publish-linux
           --output-dir artifacts/release
       - name: Verify RPM installation on Fedora
-        run: docker run --rm -v "$PWD:/workspace" -w /workspace fedora:44 bash tests/check_rpm.sh
+        run: docker run --rm -v "$PWD/..:/workspace" -w /workspace/src fedora:44 bash tests/check_rpm.sh
       - uses: actions/upload-artifact@v4
         with:
           name: installer-linux-x64
           path: |
-            artifacts/release/FolderToISO_*_amd64-setup.deb
-            artifacts/release/FolderToISO_*_x86_64-setup.rpm
-            artifacts/release/FolderToISO_*_x64-portable.tar.xz
+            src/artifacts/release/FolderToISO_*_amd64-setup.deb
+            src/artifacts/release/FolderToISO_*_x86_64-setup.rpm
+            src/artifacts/release/FolderToISO_*_x64-portable.tar.xz
           if-no-files-found: error
           retention-days: 7
 
@@ -217,8 +221,8 @@ jobs:
         with:
           name: installer-macos-arm64
           path: |
-            artifacts/release/FolderToISO_*_arm64-setup.pkg
-            artifacts/release/FolderToISO_*_arm64-portable.zip
+            src/artifacts/release/FolderToISO_*_arm64-setup.pkg
+            src/artifacts/release/FolderToISO_*_arm64-portable.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -232,7 +236,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: installer-*
-          path: artifacts/release
+          path: src/artifacts/release
           merge-multiple: true
       - name: Attach installers, checksums and installation notes
         env:

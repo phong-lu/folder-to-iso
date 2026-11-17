@@ -79,7 +79,7 @@ def main():
         logo = ROOT / "FolderToISO/FolderToISO.png"
         (resources / "FolderToISO.png").write_bytes(logo.read_bytes())
         build_icon(logo, resources)
-        (resources / "README.md").write_bytes((ROOT / "README.md").read_bytes())
+        (resources / "README.md").write_bytes((ROOT.parent / "README.md").read_bytes())
         subprocess.run(["xcrun", "swiftc", "-swift-version", "5", "-parse-as-library", "-O",
                         "-target", "arm64-apple-macos14.0", "-framework", "SwiftUI", "-framework", "AppKit",
                         str(ROOT / "macos/IsoWriter.swift"), str(ROOT / "macos/FolderToISO.swift"),

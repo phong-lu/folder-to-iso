@@ -5,6 +5,10 @@ on:
       - '**'
   pull_request:
 
+defaults:
+  run:
+    working-directory: src
+
 jobs:
   macos:
     runs-on: macos-15
@@ -32,8 +36,8 @@ jobs:
         with:
           name: macos-ui-preview
           path: |
-            artifacts/macos-ui.png
-            artifacts/macos-ui.log
+            src/artifacts/macos-ui.png
+            src/artifacts/macos-ui.log
 
   windows:
     runs-on: windows-latest

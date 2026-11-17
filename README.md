@@ -1,4 +1,4 @@
-<h1 align="center"><img src="FolderToISO/FolderToISO.png" alt="FolderToISO logo" width="72" align="absmiddle"> FolderToISO</h1>
+<h1 align="center"><img src="src/FolderToISO/FolderToISO.png" alt="FolderToISO logo" width="72" align="absmiddle"> FolderToISO</h1>
 
 <p align="center">
   <strong>Turn folders into ISO images on Windows, Linux, and macOS.</strong>
@@ -199,6 +199,12 @@ backup tool. Image size is subject to backend limits and available disk space.
 
 ## Build from source
 
+Run the build and verification commands below from `src`:
+
+```sh
+cd src
+```
+
 Clone the repository, then follow the instructions for your build platform:
 
 ```bash
@@ -275,7 +281,7 @@ dotnet build FolderToISO.slnx -c Release -p:Platform=x64
 .\FolderToISO\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\FolderToISO.exe
 ```
 
-Or open `FolderToISO.slnx` in Visual Studio, select x64 and launch FolderToISO.
+Or open `src/FolderToISO.slnx` in Visual Studio, select x64 and launch FolderToISO.
 Windows keeps the native WinUI 3 interface and built-in IMAPI2 UDF 2.01 writer;
 no external ISO utility or optical drive is required.
 
@@ -373,17 +379,15 @@ Installer compilation and installation checks run on their respective platform r
 
 ```text
 folder-to-iso/
-|-- FolderToISO/          # Windows and Linux application, validation, and writers
-|-- macos/                # Native SwiftUI application and macOS image writer
-|-- packaging/
-|   |-- windows/          # Windows installer and installation checks
-|   |-- linux/            # DEB/RPM builders and file-manager integration
-|   |-- macos/            # ARM64 app and PKG builder
-|   `-- release_tools.py  # Release metadata, checksums, and asset publishing
-|-- tests/                # Image, cancellation, packaging, and installation checks
-|-- .github/workflows/    # Build verification and release automation
-|-- FolderToISO.slnx       # Windows/Linux .NET solution
-`-- LICENSE              # MIT license
+|-- src/
+|   |-- FolderToISO/      # Windows and Linux application and ISO writers
+|   |-- macos/            # Native SwiftUI macOS application
+|   |-- packaging/        # Installer and release builders
+|   |-- tests/            # Integration and packaging checks
+|   |-- FolderToISO.slnx  # Windows/Linux .NET solution
+|-- .github/workflows/    # Build and release automation
+|-- README.md
+|-- LICENSE
 ```
 
 ## Troubleshooting
