@@ -1,11 +1,3 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="FolderToISO.App">
-  <Application.Resources>
-    <ResourceDictionary>
-      <Style TargetType="Button"><Setter Property="MinimumHeightRequest" Value="40" /></Style>
-      <Style TargetType="Entry"><Setter Property="MinimumHeightRequest" Value="40" /></Style>
-      <Style TargetType="Label"><Setter Property="LineBreakMode" Value="WordWrap" /></Style>
-    </ResourceDictionary>
-  </Application.Resources>
+<Application x:Class="FolderToISO.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Application.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></Application.Resources>
 </Application>

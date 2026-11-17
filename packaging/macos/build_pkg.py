@@ -1,9 +1,8 @@
-"""Build a MAUI Mac Catalyst Apple Silicon app and a macOS installer package."""
+"""Build a native Apple Silicon app and a macOS installer package."""
 import argparse
 import os
 from pathlib import Path
 import plistlib
-import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -15,19 +14,16 @@ from release_tools import validate_version
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def validate_bundle(app, version):
-    """Validate the MAUI-produced bundle instead of replacing its generated plist."""
-    with (app / "Contents/Info.plist").open("rb") as stream:
-        info = plistlib.load(stream)
-    if info.get("CFBundleIdentifier") != "io.github.foldertoiso.app":
-        raise ValueError("Unexpected application bundle identifier.")
-    if info.get("CFBundleShortVersionString") != validate_version(version):
-        raise ValueError("Application and installer versions differ.")
-    executable = app / "Contents/MacOS" / info.get("CFBundleExecutable", "")
-    if not executable.is_file():
-        raise ValueError(f"Missing published MAUI executable: {executable}. "
-                         f"Bundle files: {sorted(str(path.relative_to(app)) for path in app.rglob('*'))}")
-    return info
+def app_info(version):
+    version = validate_version(version)
+    return {
+        "CFBundleName": "FolderToISO", "CFBundleDisplayName": "FolderToISO",
+        "CFBundleIdentifier": "io.github.foldertoiso.app", "CFBundleExecutable": "FolderToISO",
+        "CFBundlePackageType": "APPL", "CFBundleShortVersionString": version,
+        "CFBundleVersion": version, "LSMinimumSystemVersion": "14.0",
+        "NSHighResolutionCapable": True,
+        "NSHumanReadableCopyright": "FolderToISO contributors",
+    }
 
 
 def distribution_xml(version):
@@ -58,25 +54,23 @@ def main():
     with TemporaryDirectory(prefix="foldertoiso-macos-") as temporary:
         stage = Path(temporary) / "root"
         app = stage / "Applications/FolderToISO.app"
-        build = ROOT / "FolderToISO/bin"
-        built_app = build / "Release/net10.0-maccatalyst/maccatalyst-arm64/FolderToISO.app"
-        command = ["dotnet", "publish", str(ROOT / "FolderToISO/FolderToISO.csproj"),
-                   "-c", "Release", "-p:DesktopPlatform=MacCatalyst", "-r", "maccatalyst-arm64",
-                   "--self-contained", "true", "-p:CreatePackage=false",
-                   "-p:EnableCodeSigning=true", "-p:CodesignRequireProvisioningProfile=false",
-                   f"-p:CodesignKey={args.app_identity or '-'}",
-                   f"-p:Version={version}", f"-p:ApplicationDisplayVersion={version}",
-                   f"-flp:logfile={output / 'macos-build.log'};verbosity=diagnostic"]
+        executable = app / "Contents/MacOS/FolderToISO"
+        executable.parent.mkdir(parents=True)
+        with (app / "Contents/Info.plist").open("wb") as stream:
+            plistlib.dump(app_info(version), stream)
+        resources = app / "Contents/Resources"
+        resources.mkdir()
+        (resources / "README.md").write_bytes((ROOT / "README.md").read_bytes())
+        subprocess.run(["xcrun", "swiftc", "-swift-version", "5", "-parse-as-library", "-O",
+                        "-target", "arm64-apple-macos14.0", "-framework", "SwiftUI", "-framework", "AppKit",
+                        str(ROOT / "macos/IsoWriter.swift"), str(ROOT / "macos/FolderToISO.swift"),
+                        "-o", str(executable)], check=True)
+        identity = args.app_identity or "-"
+        signing = ["codesign", "--force", "--sign", identity]
         if args.app_identity:
-            command.append("-p:UseHardenedRuntime=true")
-        subprocess.run(command, check=True)
-        # Use the SDK's default relative output paths: absolute output overrides
-        # can make its publish-copy paths point outside the actual app bundle.
-        validate_bundle(built_app, version)
-        app.parent.mkdir(parents=True)
-        # Preserve framework symlinks and the SDK's signatures on nested native code.
-        shutil.copytree(built_app, app, symlinks=True)
-        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
+            signing += ["--options", "runtime", "--timestamp"]
+        subprocess.run([*signing, str(app)], check=True)
+        subprocess.run(["codesign", "--verify", "--strict", str(app)], check=True)
         portable = output / f"FolderToISO_{version}_arm64-portable.zip"
         subprocess.run(["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(app), str(portable)], check=True)
         print(portable)

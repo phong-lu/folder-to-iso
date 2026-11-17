@@ -1,18 +1,14 @@
+using Microsoft.UI.Xaml;
 using FolderToISO.Services;
-
 namespace FolderToISO;
-
 public partial class App : Application
 {
+    private Window? window;
     public App() => InitializeComponent();
-
-    protected override Window CreateWindow(IActivationState? activationState)
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         var options = StartupOptions.Parse(Environment.GetCommandLineArgs()[1..]);
-        var page = new MainPage(options.SourceFolder, options.Error);
-        var window = new Window(page) { Title = "FolderToISO", Width = 800, Height = 620,
-            MinimumWidth = 640, MinimumHeight = 480 };
-        window.Destroying += (_, _) => page.CancelCreation();
-        return window;
+        window = new MainWindow(options.SourceFolder, options.Error);
+        window.Activate();
     }
 }

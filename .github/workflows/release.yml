@@ -37,7 +37,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet workload install maui-windows
       - name: Test Windows image creation
         run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
       - name: Publish Windows x64 application
@@ -187,31 +186,21 @@ jobs:
           python-version: '3.12'
       - name: Verify Apple Silicon runner
         run: test "$(uname -m)" = arm64
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.100'
-      # Workload set 10.0.100 targets Xcode 26.0; keep these versions aligned.
-      - name: Select Xcode 26.0.1
-        run: |
-          sudo xcode-select --switch /Applications/Xcode_26.0.1.app/Contents/Developer
-          xcodebuild -version
-      - name: Install pinned Mac Catalyst workload
-        run: |
-          dotnet new globaljson --sdk-version 10.0.100 --roll-forward disable
-          dotnet workload install maui-maccatalyst --version 10.0.100
-      - name: Verify C# macOS writer and cancellation
-        run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
-      - name: Build MAUI Mac Catalyst ARM64 installer
+      - name: Build native ARM64 installer
         run: python3 packaging/macos/build_pkg.py --version "$RELEASE_VERSION" --output-dir artifacts/release
       - name: Verify extracted macOS portable app
         run: |
           ditto -x -k "artifacts/release/FolderToISO_${RELEASE_VERSION}_arm64-portable.zip" artifacts/portable-macos
-          codesign --verify --deep --strict artifacts/portable-macos/FolderToISO.app
+          codesign --verify --strict artifacts/portable-macos/FolderToISO.app
           artifacts/portable-macos/FolderToISO.app/Contents/MacOS/FolderToISO > artifacts/portable-macos-ui.log 2>&1 &
           app=$!
           trap 'kill "$app" 2>/dev/null || true' EXIT
           sleep 3
           kill -0 "$app"
+      - name: Verify macOS naming and cancellation
+        run: |
+          xcrun swiftc -swift-version 5 -parse-as-library macos/IsoWriter.swift tests/macos_core_tests.swift -o artifacts/macos-core-tests
+          ./artifacts/macos-core-tests
       - name: Install and verify macOS image creation
         run: |
           sudo installer -pkg "artifacts/release/FolderToISO_${RELEASE_VERSION}_arm64-setup.pkg" -target /

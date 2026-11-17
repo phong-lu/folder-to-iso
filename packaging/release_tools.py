@@ -118,8 +118,8 @@ RPM folder context menus are disabled by default. Enable or disable them with
 `sudo foldertoiso-context-menu enable` or `sudo foldertoiso-context-menu disable`.
 
 **macOS (Apple Silicon):** Open the `.pkg` to install FolderToISO in Applications.
-The MAUI Mac Catalyst app includes its .NET runtime and uses macOS's built-in
-image writer; no separate .NET or Homebrew installation is required. This build is ad-hoc signed unless Developer ID signing
+The native SwiftUI app uses macOS's built-in image writer; no .NET or Homebrew
+installation is required. This build is ad-hoc signed unless Developer ID signing
 is configured, and is not notarized.
 
 Open FolderToISO from the applications menu or run `foldertoiso`. The package

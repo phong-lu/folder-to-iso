@@ -283,48 +283,10 @@ class AdditionalPlatformTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             rpm.render_spec("1.2.3", "bad\nInjected: field")
 
-    def test_mac_packaging_preserves_sdk_output_layout(self):
-        with TemporaryDirectory() as temporary:
-            packaged = []
-
-            def run(command, check):
-                if command[:2] == ["dotnet", "publish"]:
-                    self.assertNotIn("-o", command)
-                    self.assertFalse(any(arg.startswith("-p:AppBundleDir=") for arg in command))
-                    self.assertFalse(any(arg.startswith("-p:BaseOutputPath=") for arg in command))
-                    app = Path(temporary) / "FolderToISO/bin/Release/net10.0-maccatalyst/maccatalyst-arm64/FolderToISO.app"
-                    (app / "Contents/MacOS").mkdir(parents=True)
-                    (app / "Contents/MacOS/FolderToISO").write_bytes(b"executable")
-                    (app / "Contents/Info.plist").write_bytes(plistlib.dumps({
-                        "CFBundleIdentifier": "io.github.foldertoiso.app",
-                        "CFBundleShortVersionString": "1.2.3",
-                        "CFBundleExecutable": "FolderToISO",
-                    }))
-                elif command[:2] == ["codesign", "--verify"]:
-                    mac.validate_bundle(Path(command[-1]), "1.2.3")
-                    packaged.append(command[-1])
-                elif command[:2] == ["pkgbuild", "--analyze"]:
-                    Path(command[-1]).write_bytes(plistlib.dumps([]))
-
-            with patch.object(sys, "argv", ["build_pkg.py", "--version", "1.2.3",
-                                            "--output-dir", temporary]), patch.object(mac, "ROOT", Path(temporary)), patch.object(mac.subprocess, "run", side_effect=run):
-                mac.main()
-            self.assertEqual(len(packaged), 1)
-
     def test_mac_bundle_and_installer_target_apple_silicon(self):
-        with TemporaryDirectory() as temporary:
-            app = Path(temporary) / "FolderToISO.app"
-            (app / "Contents/MacOS").mkdir(parents=True)
-            (app / "Contents/MacOS/FolderToISO").write_bytes(b"published executable")
-            info = {"CFBundleIdentifier": "io.github.foldertoiso.app",
-                    "CFBundleShortVersionString": "1.2.3", "CFBundleExecutable": "FolderToISO"}
-            (app / "Contents/Info.plist").write_bytes(plistlib.dumps(info))
-            self.assertEqual(mac.validate_bundle(app, "v1.2.3"), info)
-            with self.assertRaises(ValueError):
-                mac.validate_bundle(app, "1.2.4")
-            (app / "Contents/MacOS/FolderToISO").unlink()
-            with self.assertRaises(ValueError):
-                mac.validate_bundle(app, "1.2.3")
+        info = plistlib.loads(plistlib.dumps(mac.app_info("v1.2.3")))
+        self.assertEqual(info["CFBundleShortVersionString"], "1.2.3")
+        self.assertEqual(info["LSMinimumSystemVersion"], "14.0")
         distribution = ET.fromstring(mac.distribution_xml("1.2.3"))
         self.assertEqual(distribution.find("options").get("hostArchitectures"), "arm64")
         self.assertEqual(distribution.find("volume-check/allowed-os-versions/os-version").get("min"), "14.0")
