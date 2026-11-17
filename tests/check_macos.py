@@ -8,6 +8,15 @@ import tempfile
 APP = "/Applications/FolderToISO.app/Contents/MacOS/FolderToISO"
 
 
+bundle = Path(APP).parents[1]
+with (bundle / "Info.plist").open("rb") as stream:
+    bundle_info = plistlib.load(stream)
+assert bundle_info["CFBundleIconFile"] == "FolderToISO.icns"
+icon = (bundle / "Resources/FolderToISO.icns").read_bytes()
+assert icon[:4] == b"icns" and int.from_bytes(icon[4:8], "big") == len(icon), "Invalid application icon"
+assert (bundle / "Resources/FolderToISO.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n", "Missing header logo"
+
+
 def run(*arguments, ok=True):
     result = subprocess.run([APP, *map(str, arguments)], text=True, capture_output=True)
     if ok:

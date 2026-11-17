@@ -21,9 +21,25 @@ def app_info(version):
         "CFBundleIdentifier": "io.github.foldertoiso.app", "CFBundleExecutable": "FolderToISO",
         "CFBundlePackageType": "APPL", "CFBundleShortVersionString": version,
         "CFBundleVersion": version, "LSMinimumSystemVersion": "14.0",
+        "CFBundleIconFile": "FolderToISO.icns",
         "NSHighResolutionCapable": True,
         "NSHumanReadableCopyright": "FolderToISO contributors",
     }
+
+
+def build_icon(source, resources):
+    """Build every standard macOS icon resolution from the shared Windows logo."""
+    with TemporaryDirectory(prefix="foldertoiso-icon-") as temporary:
+        iconset = Path(temporary) / "FolderToISO.iconset"
+        iconset.mkdir()
+        for points in (16, 32, 128, 256, 512):
+            for scale in (1, 2):
+                pixels = points * scale
+                suffix = "@2x" if scale == 2 else ""
+                subprocess.run(["sips", "-z", str(pixels), str(pixels), str(source), "--out",
+                                str(iconset / f"icon_{points}x{points}{suffix}.png")], check=True)
+        subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o",
+                        str(resources / "FolderToISO.icns")], check=True)
 
 
 def distribution_xml(version):
@@ -60,6 +76,9 @@ def main():
             plistlib.dump(app_info(version), stream)
         resources = app / "Contents/Resources"
         resources.mkdir()
+        logo = ROOT / "FolderToISO/FolderToISO.png"
+        (resources / "FolderToISO.png").write_bytes(logo.read_bytes())
+        build_icon(logo, resources)
         (resources / "README.md").write_bytes((ROOT / "README.md").read_bytes())
         subprocess.run(["xcrun", "swiftc", "-swift-version", "5", "-parse-as-library", "-O",
                         "-target", "arm64-apple-macos14.0", "-framework", "SwiftUI", "-framework", "AppKit",

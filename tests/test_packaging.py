@@ -287,6 +287,7 @@ class AdditionalPlatformTests(unittest.TestCase):
         info = plistlib.loads(plistlib.dumps(mac.app_info("v1.2.3")))
         self.assertEqual(info["CFBundleShortVersionString"], "1.2.3")
         self.assertEqual(info["LSMinimumSystemVersion"], "14.0")
+        self.assertEqual(info["CFBundleIconFile"], "FolderToISO.icns")
         distribution = ET.fromstring(mac.distribution_xml("1.2.3"))
         self.assertEqual(distribution.find("options").get("hostArchitectures"), "arm64")
         self.assertEqual(distribution.find("volume-check/allowed-os-versions/os-version").get("min"), "14.0")

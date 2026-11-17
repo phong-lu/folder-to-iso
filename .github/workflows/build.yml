@@ -19,6 +19,21 @@ jobs:
           ./artifacts/macos-core-tests
           sudo installer -pkg artifacts/release/FolderToISO_0.0.0_arm64-setup.pkg -target /
           python3 tests/check_macos.py
+      - name: Verify macOS desktop and capture appearance
+        run: |
+          /Applications/FolderToISO.app/Contents/MacOS/FolderToISO > artifacts/macos-ui.log 2>&1 &
+          app=$!
+          trap 'kill "$app" 2>/dev/null || true' EXIT
+          sleep 3
+          kill -0 "$app"
+          screencapture -x artifacts/macos-ui.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-ui-preview
+          path: |
+            artifacts/macos-ui.png
+            artifacts/macos-ui.log
 
   windows:
     runs-on: windows-latest
