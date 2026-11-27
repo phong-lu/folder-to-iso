@@ -1,0 +1,89 @@
+name: Build and verify
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+defaults:
+  run:
+    working-directory: src
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 packaging/macos/build_pkg.py --version 0.0.0 --output-dir artifacts/release
+      - run: |
+          xcrun swiftc -swift-version 5 -parse-as-library macos/IsoWriter.swift tests/macos_core_tests.swift -o artifacts/macos-core-tests
+          ./artifacts/macos-core-tests
+          sudo installer -pkg artifacts/release/FolderToISO_0.0.0_arm64-setup.pkg -target /
+          python3 tests/check_macos.py
+      - name: Verify macOS desktop and capture appearance
+        run: |
+          /Applications/FolderToISO.app/Contents/MacOS/FolderToISO > artifacts/macos-ui.log 2>&1 &
+          app=$!
+          trap 'kill "$app" 2>/dev/null || true' EXIT
+          sleep 3
+          kill -0 "$app"
+          screencapture -x artifacts/macos-ui.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-ui-preview
+          path: |
+            src/artifacts/macos-ui.png
+            src/artifacts/macos-ui.log
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check installer packaging helpers
+        run: python -m unittest discover -s tests -p test_packaging.py -v
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build FolderToISO.slnx -c Release -p:Platform=x64
+      - name: Verify Windows startup button state
+        run: dotnet run --project tests/FolderToISO.WindowsStartup.csproj -c Release -- FolderToISO/bin/x64/Release/net10.0-windows10.0.19041.0/win-x64/FolderToISO.exe
+      - run: dotnet run --project tests/FolderToISO.Integration.csproj -c Release
+
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: sudo apt-get update && sudo apt-get install -y genisoimage libgtk-3-0t64 xvfb xdotool
+      - run: dotnet build FolderToISO.slnx -c Release
+      - name: Verify Linux desktop opens
+        run: |
+          xvfb-run -a bash -euo pipefail -c '
+            dotnet FolderToISO/bin/x64/Release/net10.0/FolderToISO.dll > artifacts-ui.log 2>&1 &
+            app=$!
+            trap "kill $app 2>/dev/null || true" EXIT
+            timeout 15s xdotool search --sync --onlyvisible --name "^FolderToISO$"
+            kill -0 "$app"
+          '
+      - name: Create images and verify mounted UDF contents
+        run: |
+          set -euo pipefail
+          for size in small large; do
+            args=()
+            if [ "$size" = large ]; then args=(--large); fi
+            dotnet run --project tests/FolderToISO.Integration.csproj -c Release -- "${args[@]}"
+            iso=$(cat artifacts/last-integration-image.txt)
+            mount_dir=$(mktemp -d)
+            sudo mount -t udf -o loop,ro "$iso" "$mount_dir"
+            trap 'sudo umount "$mount_dir"' EXIT
+            python3 tests/verify_image.py "$(dirname "$iso")/source" "$mount_dir"
+            sudo umount "$mount_dir"
+            rmdir "$mount_dir"
+            trap - EXIT
+          done

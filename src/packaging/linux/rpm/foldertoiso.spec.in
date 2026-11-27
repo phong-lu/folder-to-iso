@@ -1,0 +1,51 @@
+# Bundled .NET binaries must not be stripped or rewritten by distro build hooks.
+%global __os_install_post %{nil}
+%global debug_package %{nil}
+%global _build_id_links none
+
+Name: foldertoiso
+Version: @VERSION@
+Release: 1
+Summary: Create ISO disc images from folders
+License: LicenseRef-NotSpecified
+Vendor: @PUBLISHER@
+URL: @URL@
+BuildArch: x86_64
+AutoReqProv: no
+Requires: glibc >= 2.38
+Requires: libgcc, libstdc++, zlib, krb5-libs, openssl-libs, libicu, ca-certificates, tzdata
+Requires: gtk3, genisoimage, python3, nautilus-python >= 4
+Requires(post): python3
+Requires(preun): python3
+
+%description
+Native desktop application with automatic output naming, progress, cancellation,
+and support for files larger than 4 GiB through UDF. Includes the .NET runtime.
+Folder context menus are disabled by default. Enable with:
+  sudo foldertoiso-context-menu enable
+
+%prep
+%build
+%install
+mkdir -p "%{buildroot}"
+cp -a "%{payload_dir}/." "%{buildroot}/"
+
+%post
+/usr/bin/python3 /usr/share/foldertoiso/integration/manage.py apply
+
+%preun
+if [ "$1" -eq 0 ]; then
+    /usr/bin/python3 /usr/share/foldertoiso/integration/manage.py disable
+fi
+
+%files
+%defattr(-,root,root,-)
+/usr/lib/foldertoiso
+/usr/bin/foldertoiso
+/usr/bin/foldertoiso-context-menu
+/usr/share/applications/foldertoiso.desktop
+/usr/share/icons/hicolor/scalable/apps/foldertoiso.svg
+/usr/share/foldertoiso
+%doc /usr/share/doc/foldertoiso
+%dir /var/lib/foldertoiso
+%ghost /var/lib/foldertoiso/context-menu-enabled

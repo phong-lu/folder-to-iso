@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+case "$1" in
+    remove|purge)
+        rm -f /usr/share/nautilus-python/extensions/foldertoiso.py \
+              /usr/share/nemo/actions/foldertoiso.nemo_action \
+              /usr/share/kio/servicemenus/foldertoiso.desktop \
+              /usr/share/Thunar/sendto/foldertoiso.desktop
+        rm -f /var/lib/foldertoiso/context-menu-enabled
+        rmdir /var/lib/foldertoiso 2>/dev/null || true
+        ;;
+esac
+if [ "$1" = purge ]; then
+    if [ -f /usr/share/debconf/confmodule ]; then
+        . /usr/share/debconf/confmodule
+        db_purge
+    fi
+fi
